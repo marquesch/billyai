@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: billy
+      POSTGRES_PASSWORD: billy
+      POSTGRES_DB: billy
+    ports:
+      - "5432:5432"
+    volumes:
+      - "billy_psql_data:/var/lib/posgresql/data"
+
+volumes:
+  billy_psql_data:
+
