@@ -6,8 +6,10 @@ from sqlalchemy import Float
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
 from sqlalchemy import String
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
 
 
@@ -15,30 +17,41 @@ class Base(DeclarativeBase):
     pass
 
 
-class User(Base):
+class TenantMixin:
+    tenant_id = mapped_column(Integer, ForeignKey("tenant.id"), nullable=False)
+
+    @declared_attr
+    def tenant(cls):
+        return relationship("Tenant")
+
+
+class Tenant(Base):
+    __tablename__ = "tenant"
+
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    users = relationship("User", back_populates="tenant")
+    bills = relationship("Bill", back_populates="tenant")
+    categories = relationship("Category", back_populates="tenant")
+
+
+class User(Base, TenantMixin):
     __tablename__ = "user"
 
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     phone_number = Column(String, nullable=False)
     name = Column(String, nullable=True)
 
-    bills = relationship("Bill", back_populates="user")
-    categories = relationship("Category", back_populates="user")
-
     @classmethod
     def get_by_phone_number(cls, session: Session, phone_number: str) -> "User | None":
         return session.query(cls).filter_by(phone_number=phone_number).first()
 
 
-class Bill(Base):
+class Bill(Base, TenantMixin):
     __tablename__ = "bill"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     value = Column(Float, nullable=False)
     date = Column(DateTime, nullable=False)
-
-    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    user = relationship("User", back_populates="bills")
 
     category_id = Column(Integer, ForeignKey("category.id"), nullable=True)
     category = relationship("Category", back_populates="bills")
@@ -47,12 +60,12 @@ class Bill(Base):
     def register(
         cls,
         session: Session,
-        user_id: int,
+        tenant_id: int,
         date: datetime.datetime,
         value: float,
         category_id: int | None = None,
     ) -> "Bill":
-        bill = cls(value=value, date=date, category_id=category_id)
+        bill = cls(value=value, date=date, category_id=category_id, tenant_id=tenant_id)
         session.add(bill)
         session.commit()
         session.refresh(bill)
@@ -60,18 +73,48 @@ class Bill(Base):
         return bill
 
     @classmethod
-    def get_all(cls, session: Session) -> "list[Bill]":
-        return session.query(cls).all()
+    def get_all(cls, session: Session, tenant_id: int) -> "list[Bill]":
+        return session.query(cls).filter_by(tenant_id=tenant_id).all()
+
+    @classmethod
+    def get_by_id(cls, session: Session, tenant_id: int, bill_id: int) -> "Bill":
+        return session.query(cls).filter_by(id=bill_id, tenant_id=tenant_id).first()
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "value": self.value,
+            "date": self.date.isoformat(),
+            "category_id": self.category_id,
+        }
 
 
-class Category(Base):
+class Category(Base, TenantMixin):
     __tablename__ = "category"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
 
-    user_id = Column(Integer, ForeignKey("user.id"))
-    user = relationship("User", back_populates="categories")
-
     bills = relationship("Bill", back_populates="category")
+
+    @classmethod
+    def create(cls, session: Session, tenant_id: int, name: str, description: str):
+        category = cls(name=name, description=description, tenant_id=tenant_id)
+
+        session.add(category)
+        session.commit()
+        session.refresh(category)
+
+        return category
+
+    @classmethod
+    def get_all(cls, session: Session, tenant_id: int) -> "list[Category]":
+        return session.query(cls).filter_by(tenant_id=tenant_id).all()
+
+    @classmethod
+    def get_by_id(cls, session: Session, tenant_id: int, category_id: int) -> "Category":
+        return session.query(cls).filter_by(tenant_id=tenant_id, id=category_id).first()
+
+    def to_dict(self):
+        return {"id": self.id, "name": self.name, "description": self.description}
