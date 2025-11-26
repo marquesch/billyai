@@ -68,7 +68,9 @@ def get_user_name(ctx: RunContext[str]) -> str:
 
 
 def register_category(
-    ctx: RunContext[AgentDependencies], name: str, description: str
+    ctx: RunContext[AgentDependencies],
+    name: str,
+    description: str,
 ) -> str:
     """Registers a category for a user.
 
@@ -140,9 +142,9 @@ def edit_bill(
 
     Args:
         bill_id (int): the id of the bill to be editted
-        date (datetime.datetime | None): the date to edit
-        value (float | None): the value of the bill to edit,
-        category_id (int | None): the id of category to edit
+        date (datetime.datetime | None): an optional new date for the bill.
+        value (float | None): an optional new value of the bill to edit,
+        category_id (int | None): an optional category_id to assign a new category.
 
     Returns:
         str: explanation of the reason it failed or success
@@ -161,6 +163,8 @@ def edit_bill(
 
     if category_id is not None:
         category = Category.get_by_id(session, tenant_id, category_id)
+        if category is not None:
+            bill.category = category
 
     session.commit()
     session.refresh(bill)
