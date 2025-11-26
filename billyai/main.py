@@ -71,7 +71,7 @@ def register_category(
     ctx: RunContext[AgentDependencies],
     name: str,
     description: str,
-) -> str:
+) -> bool:
     """Registers a category for a user.
 
     Args:
@@ -89,7 +89,7 @@ def register_category(
     return category is not None
 
 
-def get_categories(ctx: RunContext[AgentDependencies]):
+def get_all_categories(ctx: RunContext[AgentDependencies]) -> list[dict]:
     """Gets all categories from a tenant.
 
     Returns:
@@ -109,15 +109,15 @@ def register_bill(
     date: datetime.datetime,
     value: float,
     category_id: int,
-):
-    """Registers a bill for a user.
+) -> dict:
+    """Registers an expense for a user.
 
     Args:
         value (float): the value of the bill
         date: (datetime.datetime): the date of the bill
 
     Returns:
-        Bill: the registered bill
+        dict: a json representation of a Bill
 
     """
     session = ctx.deps.db_session
@@ -128,7 +128,7 @@ def register_bill(
     session.commit()
     session.refresh(bill)
 
-    return f"Bill registered. value: {bill.value}, date: {bill.date}"
+    return bill.to_dict()
 
 
 def edit_bill(
@@ -147,7 +147,7 @@ def edit_bill(
         category_id (int | None): an optional category_id to assign a new category.
 
     Returns:
-        str: explanation of the reason it failed or success
+        dict: a json representation of the editted bill
 
     """
     session = ctx.deps.db_session
@@ -172,25 +172,46 @@ def edit_bill(
     return bill.to_dict()
 
 
-def get_all_bills(ctx: RunContext[AgentDependencies]) -> str | list[dict]:
+def get_bills(
+    ctx: RunContext[AgentDependencies],
+    date_range: tuple[datetime.datetime] | None,
+    category_id: int | None,
+    value_range: tuple[float] | None,
+) -> str | list[dict]:
+    """Returns bills with optional filters. Limited to 10 bills each time.
+
+    Args:
+        date_range (tuple[datetime.datetime, datetime.datetime] | None): an optional date range (two dates) to filter the bills by their date
+        category_id (int | None): an optional id of a category to filter bills by their category
+        value_range (tuple[float, float] | None): an optional value range (two floats) to filter bills by their value
+    Return:
+        list[dict]: a list of dicts, each representing a bill
+
+    """
     session = ctx.deps.db_session
     user = ctx.deps.user
-    if user is None:
-        return "User is not yet registered"
 
-    bills = Bill.get_all(session, user.tenant_id)
-    bills = user.tenant.bills
+    bills = Bill.get_many(session, user.tenant_id, date_range, category_id, value_range)
 
     return [bill.to_dict() for bill in bills]
+
+
+def get_time_now():
+    """Gets what time is now
+    Return:
+        str: an ISO formatted string representing the current moment in time
+
+    """
+    return datetime.datetime.now().isoformat()
 
 
 registered_toolset = FunctionToolset(
     tools=[
         get_user_name,
         register_bill,
-        get_all_bills,
+        get_bills,
         register_category,
-        get_categories,
+        get_all_categories,
         edit_bill,
     ],
 )

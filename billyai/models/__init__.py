@@ -77,6 +77,32 @@ class Bill(Base, TenantMixin):
         return session.query(cls).filter_by(tenant_id=tenant_id).all()
 
     @classmethod
+    def get_many(
+        cls,
+        session: Session,
+        tenant_id: int,
+        date_range: tuple[datetime.datetime] | None = None,
+        category_id: int | None = None,
+        value_range: tuple[float] | None = None,
+    ) -> "list[Bill]":
+        print(date_range)
+        print(category_id)
+        print(value_range)
+
+        query = session.query(cls).filter_by(tenant_id=tenant_id)
+
+        if date_range is not None:
+            query = query.filter(cls.date.between(*date_range))
+
+        if category_id is not None:
+            query = query.filter(cls.category_id == category_id)
+
+        if value_range is not None:
+            query = query.filter(cls.value.between(*value_range))
+
+        return query.limit(10).all()
+
+    @classmethod
     def get_by_id(cls, session: Session, tenant_id: int, bill_id: int) -> "Bill":
         return session.query(cls).filter_by(id=bill_id, tenant_id=tenant_id).first()
 
