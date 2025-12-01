@@ -1,42 +1,17 @@
-import datetime
-import json
-import random
-import secrets
-import string
 from typing import Annotated
-from typing import Type
 
-import jwt
 from fastapi import APIRouter
 from fastapi import Depends
-from fastapi import Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from redis import Redis
 
-import tasks
-from cfg import Session
-from cfg import db_session
-from core.models import Tenant
-from core.models import User
-from libs import auth
-from libs.cache import Cache
-from libs.cache import get_cache
 from service.auth import AuthService
 from service.auth import get_auth_svc
-
-JWT_SECRET = "supersecret"
-JWT_ALGORITHM = "HS256"
 
 auth_router = APIRouter(prefix="/auth")
 
 
 class RegisterUserRequest(BaseModel):
-    name: str
-    phone_number: str
-
-
-class UserModel(BaseModel):
     name: str
     phone_number: str
 

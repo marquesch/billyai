@@ -5,12 +5,20 @@ services:
       - "8080:8080"
     volumes:
       - "./src:/app"
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
 
   message_service:
     build: .
     volumes:
       - "./src:/app"
     command: celery -A tasks worker --loglevel=INFO
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
 
   postgres:
     image: postgres:latest

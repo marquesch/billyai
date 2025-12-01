@@ -16,18 +16,14 @@ from core.models.schema import UserModel
 from libs import auth as auth_lib
 from libs.cache import Cache
 from libs.cache import get_cache
+from service import Service
 
 USER_PIN_TEMPLATE = Template("user:$user_id:pin")
 USER_PIN_TTL_SECONDS = 1800
 USER_VALIDATION_TOKEN_TTL_SECONDS = 1800
 
 
-class AuthService:
-    def __init__(self, cache: Cache, session: Session, base_url: str):
-        self.cache = cache
-        self.session = session
-        self.base_url = base_url
-
+class AuthService(Service):
     def generate_jwt_token(self, phone_number: str, pin: str) -> str:
         user = self._get_user(phone_number)
 
@@ -44,7 +40,7 @@ class AuthService:
         key = USER_PIN_TEMPLATE.substitute(user_id=user.id)
         self.cache.setex(key, datetime.timedelta(seconds=USER_PIN_TTL_SECONDS), pin)
 
-        tasks.send_pin(phone_number, pin)
+        tasks.send_pin.delay(phone_number, pin)
 
     def register(self, phone_number: str, name: str) -> None:
         user = User.get_by_phone_number(self.session, phone_number)

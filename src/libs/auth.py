@@ -31,12 +31,11 @@ def authenticated_user(
 
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user_data = payload.get("user")
-        if user_data is None:
-            raise credentials_exception
-
-        user_phone_number = user_data["phone_number"]
     except jwt.exceptions.PyJWTError:
+        raise credentials_exception
+
+    user_phone_number = payload.get("sub")
+    if user_phone_number is None:
         raise credentials_exception
 
     user = User.get_by_phone_number(session, user_phone_number)

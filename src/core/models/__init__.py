@@ -11,6 +11,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm.query import Query
 
 
 class Base(DeclarativeBase):
@@ -167,8 +168,8 @@ class Category(Base, TenantMixin):
         return category
 
     @classmethod
-    def get_all(cls, session: Session, tenant_id: int) -> "list[Category]":
-        return session.query(cls).filter_by(tenant_id=tenant_id).all()
+    def get_all(cls, session: Session, tenant_id: int) -> Query:
+        return session.query(cls).filter_by(tenant_id=tenant_id)
 
     @classmethod
     def get_by_id(cls, session: Session, tenant_id: int, category_id: int) -> "Category":
