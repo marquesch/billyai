@@ -33,6 +33,22 @@ class Tenant(Base):
     bills = relationship("Bill", back_populates="tenant")
     categories = relationship("Category", back_populates="tenant")
 
+    @classmethod
+    def new(
+        cls,
+        session: Session,
+        users: list["User"] = [],
+        bills: list["Bill"] = [],
+        categories: list["Category"] = [],
+    ) -> "Tenant":
+        tenant = cls(users=users, bills=bills, categories=categories)
+
+        session.add(tenant)
+        session.flush()
+        session.refresh(tenant)
+
+        return tenant
+
 
 class User(Base, TenantMixin):
     __tablename__ = "user"
@@ -42,8 +58,24 @@ class User(Base, TenantMixin):
     name = Column(String, nullable=True)
 
     @classmethod
+    def new(cls, session: Session, name: str, phone_number: str, tenant_id: int) -> "User":
+        user = cls(name=name, phone_number=phone_number, tenant_id=tenant_id)
+
+        session.add(user)
+        session.flush()
+        session.refresh(user)
+
+        return user
+
+    @classmethod
     def get_by_phone_number(cls, session: Session, phone_number: str) -> "User | None":
         return session.query(cls).filter_by(phone_number=phone_number).first()
+
+    def to_dict(self):
+        return {
+            "phone_number": self.phone_number,
+            "name": self.name,
+        }
 
 
 class Bill(Base, TenantMixin):
