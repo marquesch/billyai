@@ -172,8 +172,12 @@ class Category(Base, TenantMixin):
         return session.query(cls).filter_by(tenant_id=tenant_id)
 
     @classmethod
-    def get_by_id(cls, session: Session, tenant_id: int, category_id: int) -> "Category":
-        return session.query(cls).filter_by(tenant_id=tenant_id, id=category_id).first()
+    def get_by_id(cls, session: Session, tenant_id: int, category_id: int) -> "Category | None":
+        return session.query(cls).filter_by(tenant_id=tenant_id).get(category_id)
+
+    @classmethod
+    def get_by_name(cls, session: Session, tenant_id: int, category_name: str) -> "Category | None":
+        return session.query(cls).filter_by(tenant_id=tenant_id, name=category_name).first()
 
     def to_dict(self):
         return {"id": self.id, "name": self.name, "description": self.description}
