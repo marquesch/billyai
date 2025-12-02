@@ -33,6 +33,18 @@ def index(
     return JSONResponse({"data": categories}, 200)
 
 
+@category_router.get("/{category_id}")
+def get_category(
+    category_id: int,
+    user: Annotated[User, Depends(auth_lib.authenticated_user)],
+    category_service: Annotated[CategoryService, Depends(get_category_svc)],
+):
+    try:
+        category = category_service.get_category(user, category_id)
+    except CategoryNotFoundException as e:
+        raise HTTPException(404, detail="Category not found") from e
+
+
 @category_router.post("/")
 def create_category(
     req: CategoryRequest,

@@ -26,6 +26,14 @@ class CategoryService(Service):
 
         yield from (category for category in categories_query)
 
+    def get_category(self, user: User, category_id: int):
+        category = Category.get_by_id(self.session, user.tenant_id, category_id)
+
+        if category is None:
+            raise CategoryNotFoundException
+
+        return category
+
     def new_category(self, user: User, name: str, description: str) -> Category:
         category = Category.get_by_name(self.session, user.tenant_id, name)
         if category is not None:
