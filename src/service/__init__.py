@@ -1,5 +1,6 @@
 from cfg import Session
 from libs.cache import Cache
+from typing import Protocol
 
 
 class Service:
