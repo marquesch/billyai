@@ -28,7 +28,7 @@ def index(
     user: Annotated[User, Depends(auth_lib.authenticated_user)],
     category_service: Annotated[CategoryService, Depends(get_category_svc)],
 ):
-    categories = [category.to_dict() for category in category_service.get_categories(user, per_page, page)]
+    categories = [category.to_dict() for category in category_service.get_categories(user.tenant_id, per_page, page)]
 
     return JSONResponse({"data": categories}, 200)
 
@@ -40,9 +40,11 @@ def get_category(
     category_service: Annotated[CategoryService, Depends(get_category_svc)],
 ):
     try:
-        category = category_service.get_category(user, category_id)
+        category = category_service.get_category(user.tenant_id, category_id)
     except CategoryNotFoundException as e:
         raise HTTPException(404, detail="Category not found") from e
+
+    return JSONResponse({"data": category.to_dict()})
 
 
 @category_router.post("/")
@@ -52,7 +54,7 @@ def create_category(
     category_service: Annotated[CategoryService, Depends(get_category_svc)],
 ):
     try:
-        category = category_service.new_category(user, req.name, req.description)
+        category = category_service.create_category(user.tenant_id, req.name, req.description)
     except CategoryExistsException as e:
         raise HTTPException(409, detail="Category with this name already exists") from e
 
@@ -67,7 +69,7 @@ def update_category(
     category_service: Annotated[CategoryService, Depends(get_category_svc)],
 ):
     try:
-        category = category_service.update_category(user, category_id, req.name, req.description)
+        category = category_service.update_category(user.tenant_id, category_id, req.name, req.description)
     except CategoryNotFoundException as e:
         raise HTTPException(404, detail="Category not found") from e
 

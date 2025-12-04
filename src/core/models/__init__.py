@@ -118,10 +118,6 @@ class Bill(Base, TenantMixin):
         category_id: int | None = None,
         value_range: tuple[float] | None = None,
     ) -> "list[Bill]":
-        print(date_range)
-        print(category_id)
-        print(value_range)
-
         query = session.query(cls).filter_by(tenant_id=tenant_id)
 
         if date_range is not None:

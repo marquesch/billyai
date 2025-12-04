@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from typing import Annotated
 
 from fastapi import Depends
@@ -21,28 +22,28 @@ class CategoryExistsException(Exception):
 
 
 class CategoryService(Service):
-    def get_categories(self, user: User, per_page: int, page: int):
-        categories_query = paginate(Category.get_all(self.session, user.tenant_id), per_page=per_page, page=page)
+    def get_categories(self, tenant_id: int, per_page: int, page: int) -> Generator[Category]:
+        categories_query = paginate(Category.get_all(self.session, tenant_id), per_page=per_page, page=page)
 
         yield from (category for category in categories_query)
 
-    def get_category(self, user: User, category_id: int):
-        category = Category.get_by_id(self.session, user.tenant_id, category_id)
+    def get_category(self, tenant_id: int, category_id: int) -> Category:
+        category = Category.get_by_id(self.session, tenant_id, category_id)
 
         if category is None:
             raise CategoryNotFoundException
 
         return category
 
-    def new_category(self, user: User, name: str, description: str) -> Category:
-        category = Category.get_by_name(self.session, user.tenant_id, name)
+    def create_category(self, tenant_id: int, name: str, description: str) -> Category:
+        category = Category.get_by_name(self.session, tenant_id, name)
         if category is not None:
             raise CategoryExistsException
 
-        return Category.create(self.session, user.tenant_id, name, description)
+        return Category.create(self.session, tenant_id, name, description)
 
-    def update_category(self, user: User, category_id: int, name: str, description: str):
-        category = Category.get_by_id(self.session, user.tenant_id, category_id)
+    def update_category(self, tenant_id: int, category_id: int, name: str, description: str) -> Category:
+        category = Category.get_by_id(self.session, tenant_id, category_id)
 
         if category is None:
             raise CategoryNotFoundException
