@@ -1,0 +1,23 @@
+from typing import Any
+from typing import Protocol
+from typing import runtime_checkable
+
+from domain.entities import User
+
+
+class RegistrationService(Protocol):
+    def initiate_user_registration(self, phone_number: str, name: str) -> str: ...
+    def register_user(self, token) -> User: ...
+
+
+@runtime_checkable
+class TemporaryStorageService(Protocol):
+    def set(self, key: str, value: Any, expiration_seconds: int | None) -> bool: ...
+    def get(self, key: str) -> Any: ...
+    def delete(self, key: str) -> bool: ...
+
+
+@runtime_checkable
+class UserEncodingService(Protocol):
+    def encode(self, user_id: int) -> str: ...
+    def decode(self, token: str) -> int: ...

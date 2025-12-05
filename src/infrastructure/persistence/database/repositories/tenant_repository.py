@@ -1,6 +1,6 @@
 from domain.entities import Tenant
-from infrastructure.db.models import DBTenant
-from infrastructure.db.repositories import DBRepository
+from infrastructure.persistence.database.models import DBTenant
+from infrastructure.persistence.database.repositories import DBRepository
 
 
 class DBTenantRepository(DBRepository):
