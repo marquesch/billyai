@@ -14,7 +14,6 @@ from domain.ports.services import UserEncodingService
 USER_PIN_TEMPLATE = Template("user:$user_id:pin")
 USER_PIN_TTL_SECONDS = 1800
 USER_VALIDATION_TOKEN_TTL_SECONDS = 1800
-JWT_TTL_SECONDS = 1800
 
 
 class AuthenticationService:
