@@ -12,6 +12,7 @@ class User:
     id: int
     phone_number: str
     name: str
+    tenant_id: int
 
 
 @dataclass

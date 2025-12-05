@@ -2,9 +2,9 @@ import datetime
 from collections.abc import Generator
 
 from domain.entities import Bill
-from infrastructure.db.models import DBBill
-from infrastructure.db.repositories import DBRepository
-from infrastructure.db.repositories.exceptions import ResourceNotFoundException
+from domain.exceptions import ResourceNotFoundException
+from infrastructure.persistence.database.models import DBBill
+from infrastructure.persistence.database.repositories import DBRepository
 
 
 class DBBillRepository(DBRepository):
