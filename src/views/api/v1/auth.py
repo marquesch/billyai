@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from service.auth import AuthService
 from service.auth import get_auth_svc
 
-auth_router = APIRouter(prefix="/auth")
+router = APIRouter(prefix="/auth")
 
 
 class RegisterUserRequest(BaseModel):
@@ -25,7 +25,7 @@ class NewPINRequest(BaseModel):
     phone_number: str
 
 
-@auth_router.post("/user")
+@router.post("/user")
 async def register(
     req: RegisterUserRequest,
     auth_service: Annotated[AuthService, Depends(get_auth_svc)],
@@ -35,7 +35,7 @@ async def register(
     return JSONResponse({"Detail": "A confirmation link was sent to your phone"})
 
 
-@auth_router.get("/validation", name="user_validation")
+@router.get("/validation", name="user_validation")
 async def user_validation(
     token: str,
     auth_service: Annotated[AuthService, Depends(get_auth_svc)],
@@ -45,13 +45,13 @@ async def user_validation(
     return JSONResponse({"data": user.to_dict()})
 
 
-@auth_router.post("/pin")
+@router.post("/pin")
 async def new_pin(req: NewPINRequest, auth_service: Annotated[AuthService, Depends(get_auth_svc)]):
     auth_service.generate_pin(req.phone_number)
 
     return JSONResponse({"message": "A PIN was sent to your phone"})
 
 
-@auth_router.post("/session")
+@router.post("/session")
 async def new_session(req: NewSessionRequest, auth_service: Annotated[AuthService, Depends(get_auth_svc)]):
     return JSONResponse({"token": auth_service.generate_jwt_token(req.phone_number, req.pin)})
