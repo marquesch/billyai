@@ -13,7 +13,7 @@ from service.category import CategoryNotFoundException
 from service.category import CategoryService
 from service.category import get_category_svc
 
-category_router = APIRouter(prefix="/categories")
+router = APIRouter(prefix="/categories")
 
 
 class CategoryRequest(BaseModel):
@@ -21,7 +21,7 @@ class CategoryRequest(BaseModel):
     description: str
 
 
-@category_router.get("/")
+@router.get("/")
 def index(
     per_page: int,
     page: int,
@@ -33,7 +33,7 @@ def index(
     return JSONResponse({"data": categories}, 200)
 
 
-@category_router.get("/{category_id}")
+@router.get("/{category_id}")
 def get_category(
     category_id: int,
     user: Annotated[User, Depends(auth_lib.authenticated_user)],
@@ -47,7 +47,7 @@ def get_category(
     return JSONResponse({"data": category.to_dict()})
 
 
-@category_router.post("/")
+@router.post("/")
 def create_category(
     req: CategoryRequest,
     user: Annotated[User, Depends(auth_lib.authenticated_user)],
@@ -61,7 +61,7 @@ def create_category(
     return JSONResponse({"data": category.to_dict()}, 201)
 
 
-@category_router.put("/{category_id}")
+@router.put("/{category_id}")
 def update_category(
     category_id: int,
     req: CategoryRequest,

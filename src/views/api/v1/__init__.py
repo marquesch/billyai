@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 
-from views.api.v1.auth import auth_router
-from views.api.v1.category import category_router
+from views.api.v1 import auth
+from views.api.v1 import category
 
-v1_router = APIRouter(prefix="/v1")
+router = APIRouter(prefix="/v1")
 
-v1_router.include_router(auth_router)
-v1_router.include_router(category_router)
+router.include_router(auth.router)
+router.include_router(category.router)

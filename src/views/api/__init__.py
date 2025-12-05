@@ -1,7 +1,7 @@
-from views.api.v1 import v1_router
+from views.api import v1
 from fastapi import APIRouter
 
-api_router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api")
 
 
-api_router.include_router(v1_router)
+router.include_router(v1.router)
