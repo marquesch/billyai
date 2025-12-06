@@ -1,13 +1,16 @@
 import json
 from typing import Any
 
-from redis import Redis
+import redis
 
 from domain.exceptions import ResourceNotFoundException
+from infrastructure.config import settings
+
+pool = redis.ConnectionPool(host=settings.app_settings.redis_host, port=settings.app_settings.redis_port, db=0)
 
 
 class RedisTemporaryStorageService:
-    def __init__(self, redis_client: Redis):
+    def __init__(self, redis_client: redis.Redis):
         self.client = redis_client
 
     def set(self, key: str, value: Any, expiration_seconds: int = -1) -> bool:

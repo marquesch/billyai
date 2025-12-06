@@ -22,16 +22,16 @@ class TenantMixin:
 
     @declared_attr
     def tenant(cls):
-        return relationship("Tenant")
+        return relationship("DBTenant")
 
 
 class DBTenant(Base):
     __tablename__ = "tenant"
 
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    users = relationship("User", back_populates="tenant")
-    bills = relationship("Bill", back_populates="tenant")
-    categories = relationship("Category", back_populates="tenant")
+    users = relationship("DBUser", back_populates="tenant")
+    bills = relationship("DBBill", back_populates="tenant")
+    categories = relationship("DBCategory", back_populates="tenant")
 
     def __init__(self, tenant: Tenant):
         self.id = tenant.id
@@ -48,7 +48,7 @@ class DBUser(Base, TenantMixin):
     name = Column(String, nullable=True)
 
     def to_entity(self):
-        return User(id=self.id, phone_number=self.phone_number, name=self.name)
+        return User(id=self.id, phone_number=self.phone_number, name=self.name, tenant_id=self.tenant_id)
 
 
 class DBBill(Base, TenantMixin):
@@ -59,10 +59,12 @@ class DBBill(Base, TenantMixin):
     date = Column(DateTime, nullable=False)
 
     category_id = Column(Integer, ForeignKey("category.id"), nullable=True)
-    category = relationship("Category", back_populates="bills")
+    category = relationship("DBCategory", back_populates="bills")
 
     def to_entity(self):
-        return Bill(id=self.id, value=self.value, date=self.date, category_id=self.category_id)
+        return Bill(
+            id=self.id, value=self.value, date=self.date, category_id=self.category_id, tenant_id=self.tenant_id
+        )
 
 
 class DBCategory(Base, TenantMixin):
@@ -72,7 +74,7 @@ class DBCategory(Base, TenantMixin):
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
 
-    bills = relationship("Bill", back_populates="category")
+    bills = relationship("DBBill", back_populates="category")
 
     def to_entity(self):
-        return Category(id=self.id, name=self.name, description=self.description)
+        return Category(id=self.id, name=self.name, description=self.description, tenant_id=self.tenant_id)

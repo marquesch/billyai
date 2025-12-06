@@ -2,13 +2,6 @@ from typing import Any
 from typing import Protocol
 from typing import runtime_checkable
 
-from domain.entities import User
-
-
-class RegistrationService(Protocol):
-    def initiate_user_registration(self, phone_number: str, name: str) -> str: ...
-    def register_user(self, token) -> User: ...
-
 
 @runtime_checkable
 class TemporaryStorageService(Protocol):
