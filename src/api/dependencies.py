@@ -1,0 +1,104 @@
+from collections.abc import Generator
+from typing import Annotated
+
+import redis
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+from application.services.authentication_service import AuthenticationService
+from application.services.registration_service import RegistrationService
+from domain.ports.repositories import BillRepository
+from domain.ports.repositories import CategoryRepository
+from domain.ports.repositories import TenantRepository
+from domain.ports.repositories import UserRepository
+from domain.ports.services import TemporaryStorageService
+from domain.ports.services import UserEncodingService
+from infrastructure.config import settings
+from infrastructure.persistence.database import db_session
+from infrastructure.persistence.database.repositories.bill_repository import DBBillRepository
+from infrastructure.persistence.database.repositories.category_repository import DBCategoryRepository
+from infrastructure.persistence.database.repositories.tenant_repository import DBTenantRepository
+from infrastructure.persistence.database.repositories.user_repository import DBUserRepository
+from infrastructure.services.jwt_encoding_service import JWTUserEncodingService
+from infrastructure.services.redis_temporary_storage_service import RedisTemporaryStorageService
+
+
+def get_session() -> Generator[Session, None, None]:
+    if settings.app_settings.environment == "testing":
+        yield None
+        return
+
+    with db_session() as session:
+        yield session
+
+
+def get_redis_client() -> redis.Redis:
+    from infrastructure.services.redis_temporary_storage_service import pool
+
+    return redis.Redis(connection_pool=pool)
+
+
+def get_tenant_repository(session: Annotated[Session, Depends(get_session)]) -> TenantRepository:
+    match settings.app_settings.environment:
+        case "testing":
+            return None
+        case _:
+            return DBTenantRepository(session)
+
+
+def get_user_repository(session: Annotated[Session, Depends(get_session)]) -> UserRepository:
+    match settings.app_settings.environment:
+        case "testing":
+            return None
+        case _:
+            return DBUserRepository(session)
+
+
+def get_bill_repository(session: Annotated[Session, Depends(get_session)]) -> BillRepository:
+    match settings.app_settings.environment:
+        case "testing":
+            return None
+        case _:
+            return DBBillRepository(session)
+
+
+def get_category_repository(session: Annotated[Session, Depends(get_session)]) -> CategoryRepository:
+    match settings.app_settings.environment:
+        case "testing":
+            return None
+        case _:
+            return DBCategoryRepository(session)
+
+
+def get_temporary_storage_service(
+    redis_client: Annotated[redis.Redis, Depends(get_redis_client)],
+) -> TemporaryStorageService:
+    match settings.app_settings.environment:
+        case "testing":
+            return None
+        case _:
+            return RedisTemporaryStorageService(redis_client)
+
+
+def get_user_encoding_service() -> UserEncodingService:
+    match settings.app_settings.environment:
+        case "testing":
+            return None
+        case _:
+            return JWTUserEncodingService()
+
+
+def get_authentication_service(
+    user_repository: Annotated[UserRepository, Depends(get_user_repository)],
+    temporary_storage_service: Annotated[TemporaryStorageService, Depends(get_temporary_storage_service)],
+    user_encoding_service: Annotated[UserEncodingService, Depends(get_user_encoding_service)],
+) -> AuthenticationService:
+    return AuthenticationService(user_repository, temporary_storage_service, user_encoding_service)
+
+
+def get_registration_service(
+    user_repository: Annotated[UserRepository, Depends(get_user_repository)],
+    tenant_repository: Annotated[UserRepository, Depends(get_tenant_repository)],
+    temporary_storage_service: Annotated[TemporaryStorageService, Depends(get_temporary_storage_service)],
+) -> RegistrationService:
+    return RegistrationService(user_repository, tenant_repository, temporary_storage_service)

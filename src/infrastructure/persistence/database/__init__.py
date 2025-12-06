@@ -1,21 +1,23 @@
-from typing import Type
+from contextlib import contextmanager
 
 import sqlalchemy as sa
 from sqlalchemy.engine import create_engine
 from sqlalchemy.orm import sessionmaker
 
-engine = create_engine("postgresql+psycopg2://billy:billy@postgres:5432/billy?sslmode=disable", pool_size=60)
-Session: type[sa.orm.Session] = sessionmaker(engine)
+from infrastructure.config.settings import app_settings
+
+engine = create_engine(app_settings.database_url)
+SessionLocal: type[sa.orm.Session] = sessionmaker(engine)
 
 
+@contextmanager
 def db_session():
+    session = SessionLocal()
     try:
-        session = Session()
         yield session
+        session.commit()
     except Exception:
         session.rollback()
         raise
-    else:
-        session.commit()
     finally:
         session.close()
