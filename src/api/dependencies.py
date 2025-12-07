@@ -3,10 +3,14 @@ from typing import Annotated
 
 import redis
 from fastapi import Depends
+from fastapi import HTTPException
+from fastapi.security import HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 
 from application.services.authentication_service import AuthenticationService
 from application.services.registration_service import RegistrationService
+from domain.exceptions import AuthError
 from domain.ports.repositories import BillRepository
 from domain.ports.repositories import CategoryRepository
 from domain.ports.repositories import TenantRepository
@@ -21,6 +25,8 @@ from infrastructure.persistence.database.repositories.tenant_repository import D
 from infrastructure.persistence.database.repositories.user_repository import DBUserRepository
 from infrastructure.services.jwt_encoding_service import JWTUserEncodingService
 from infrastructure.services.redis_temporary_storage_service import RedisTemporaryStorageService
+
+security = HTTPBearer()
 
 
 def get_session() -> Generator[Session, None, None]:
@@ -102,3 +108,13 @@ def get_registration_service(
     temporary_storage_service: Annotated[TemporaryStorageService, Depends(get_temporary_storage_service)],
 ) -> RegistrationService:
     return RegistrationService(user_repository, tenant_repository, temporary_storage_service)
+
+
+def get_current_user(
+    authentication_service: Annotated[AuthenticationService, Depends(get_authentication_service)],
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+):
+    try:
+        return authentication_service.authenticate_user(credentials.credentials)
+    except AuthError as e:
+        raise HTTPException(401) from e

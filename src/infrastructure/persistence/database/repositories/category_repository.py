@@ -1,6 +1,9 @@
 from collections.abc import Generator
 
+from sqlalchemy.exc import IntegrityError
+
 from domain.entities import Category
+from domain.exceptions import CategoryAlreadyExists
 from domain.exceptions import ResourceNotFoundException
 from infrastructure.persistence.database.models import DBCategory
 from infrastructure.persistence.database.repositories import DBRepository
@@ -11,7 +14,12 @@ class DBCategoryRepository(DBRepository):
         db_category = DBCategory(tenant_id=tenant_id, name=name, description=description)
 
         self.session.add(db_category)
-        self.session.flush(db_category)
+
+        try:
+            self.session.flush()
+        except IntegrityError:
+            raise CategoryAlreadyExists
+
         self.session.refresh(db_category)
 
         return db_category.to_entity()
@@ -25,5 +33,38 @@ class DBCategoryRepository(DBRepository):
 
         if db_category is None:
             raise ResourceNotFoundException
+
+        return db_category.to_entity()
+
+    def get_by_id(self, tenant_id: int, category_id: int) -> Category:
+        db_category = self.session.query(DBCategory).filter_by(tenant_id=tenant_id, id=category_id).first()
+
+        if db_category is None:
+            raise ResourceNotFoundException
+
+        return db_category.to_entity()
+
+    def update(
+        self,
+        tenant_id: int,
+        category_id: int,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> Category:
+        db_category = self.session.query(DBCategory).filter_by(tenant_id=tenant_id, id=category_id).first()
+
+        if db_category is None:
+            raise ResourceNotFoundException
+
+        if name is not None:
+            db_category.name = name
+
+        if description is not None:
+            db_category.description = description
+
+        try:
+            self.session.flush()
+        except IntegrityError as e:
+            raise CategoryAlreadyExists from e
 
         return db_category.to_entity()

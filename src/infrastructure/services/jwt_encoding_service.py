@@ -9,21 +9,21 @@ JWT_ALGORITHM = "HS256"
 
 
 class JWTUserEncodingService:
-    def encode(self, user_id: id, exp: int) -> str:
+    def encode(self, phone_number: str, exp: int) -> str:
         payload = {
-            "sub": user_id,
+            "sub": phone_number,
             "exp": datetime.datetime.now() + datetime.timedelta(seconds=exp),
         }
 
         return jwt.encode(payload, JWT_SECRET, JWT_ALGORITHM)
 
-    def decode(self, token: str) -> int:
+    def decode(self, token: str) -> str:
         try:
-            payload = jwt.decode(token, algorithms=[JWT_ALGORITHM])
+            payload = jwt.decode(token, key=JWT_SECRET, algorithms=[JWT_ALGORITHM])
         except jwt.exceptions.PyJWTError as e:
             raise DecodingError from e
 
-        if user_id := payload.get("sub") is None:
+        if (phone_number := payload.get("sub")) is None:
             raise DecodingError
 
-        return user_id
+        return phone_number

@@ -25,5 +25,3 @@ class Settings(BaseSettings):
 
 
 app_settings = Settings()
-
-print(app_settings)

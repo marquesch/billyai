@@ -2,7 +2,7 @@ class ResourceNotFoundException(Exception):
     pass
 
 
-class AuthenticationError(Exception):
+class AuthError(Exception):
     pass
 
 
@@ -19,4 +19,8 @@ class RegistrationError(Exception):
 
 
 class PhoneNumberTakenException(RegistrationError):
+    pass
+
+
+class CategoryAlreadyExists(Exception):
     pass

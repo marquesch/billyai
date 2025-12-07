@@ -3,8 +3,7 @@ import string
 from string import Template
 
 from domain.entities import User
-from domain.exceptions import AuthenticationError
-from domain.exceptions import AuthorizationError
+from domain.exceptions import AuthError
 from domain.exceptions import DecodingError
 from domain.exceptions import ResourceNotFoundException
 from domain.ports.repositories import UserRepository
@@ -31,15 +30,15 @@ class AuthenticationService:
         try:
             return self.user_repository.get_by_phone_number(phone_number)
         except ResourceNotFoundException as e:
-            raise AuthenticationError("User not found") from e
+            raise AuthError("User not found") from e
 
     def authenticate_user(self, token: str) -> User:
         try:
-            user_id = self.user_encoding_service.decode(token)
+            phone_number = self.user_encoding_service.decode(token)
         except DecodingError as e:
-            raise AuthenticationError("Decoding error") from e
+            raise AuthError("Decoding error") from e
 
-        user = self._get_user_by_phone_number(user_id)
+        user = self._get_user_by_phone_number(phone_number)
 
         return user
 
@@ -55,17 +54,14 @@ class AuthenticationService:
         return pin
 
     def authorize_user(self, phone_number: str, pin: str) -> str:
-        try:
-            user = self.user_repository.get_by_phone_number(phone_number)
-        except ResourceNotFoundException as e:
-            raise AuthorizationError("User not found") from e
+        user = self._get_user_by_phone_number(phone_number)
 
         try:
             user_data = self.temporary_storage_service.get(USER_PIN_TEMPLATE.substitute(user_id=user.id))
         except ResourceNotFoundException:
-            raise AuthorizationError("Invalid PIN")
+            raise AuthError("Invalid PIN")
 
         if user_data["pin"] != pin:
-            raise AuthorizationError("Wrong PIN")
+            raise AuthError("Invalid PIN")
 
-        return self.user_encoding_service.encode(user.id, USER_TOKEN_TTL)
+        return self.user_encoding_service.encode(phone_number, USER_TOKEN_TTL)

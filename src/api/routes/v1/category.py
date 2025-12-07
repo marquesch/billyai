@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import Annotated
 
 from fastapi import APIRouter
@@ -6,12 +7,11 @@ from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from core.models import User
-from libs import auth as auth_lib
-from service.category import CategoryExistsException
-from service.category import CategoryNotFoundException
-from service.category import CategoryService
-from service.category import get_category_svc
+from api import dependencies
+from domain.entities import User
+from domain.exceptions import CategoryAlreadyExists
+from domain.exceptions import ResourceNotFoundException
+from domain.ports.repositories import CategoryRepository
 
 router = APIRouter(prefix="/categories")
 
@@ -23,12 +23,10 @@ class CategoryRequest(BaseModel):
 
 @router.get("/")
 def index(
-    per_page: int,
-    page: int,
-    user: Annotated[User, Depends(auth_lib.authenticated_user)],
-    category_service: Annotated[CategoryService, Depends(get_category_svc)],
+    user: Annotated[User, Depends(dependencies.get_current_user)],
+    category_repository: Annotated[CategoryRepository, Depends(dependencies.get_category_repository)],
 ):
-    categories = [category.to_dict() for category in category_service.get_categories(user.tenant_id, per_page, page)]
+    categories = [asdict(category) for category in category_repository.get_all(user.tenant_id)]
 
     return JSONResponse({"data": categories}, 200)
 
@@ -36,41 +34,43 @@ def index(
 @router.get("/{category_id}")
 def get_category(
     category_id: int,
-    user: Annotated[User, Depends(auth_lib.authenticated_user)],
-    category_service: Annotated[CategoryService, Depends(get_category_svc)],
+    user: Annotated[User, Depends(dependencies.get_current_user)],
+    category_repository: Annotated[CategoryRepository, Depends(dependencies.get_category_repository)],
 ):
     try:
-        category = category_service.get_category(user.tenant_id, category_id)
-    except CategoryNotFoundException as e:
+        category = category_repository.get_by_id(user.tenant_id, category_id)
+    except ResourceNotFoundException as e:
         raise HTTPException(404, detail="Category not found") from e
 
-    return JSONResponse({"data": category.to_dict()})
+    return JSONResponse({"data": asdict(category)})
 
 
 @router.post("/")
 def create_category(
     req: CategoryRequest,
-    user: Annotated[User, Depends(auth_lib.authenticated_user)],
-    category_service: Annotated[CategoryService, Depends(get_category_svc)],
+    user: Annotated[User, Depends(dependencies.get_current_user)],
+    category_repository: Annotated[CategoryRepository, Depends(dependencies.get_category_repository)],
 ):
     try:
-        category = category_service.create_category(user.tenant_id, req.name, req.description)
-    except CategoryExistsException as e:
-        raise HTTPException(409, detail="Category with this name already exists") from e
+        category = category_repository.create(user.tenant_id, req.name, req.description)
+    except CategoryAlreadyExists as e:
+        raise HTTPException(409, detail="Category already exists") from e
 
-    return JSONResponse({"data": category.to_dict()}, 201)
+    return JSONResponse({"data": asdict(category)}, 201)
 
 
 @router.put("/{category_id}")
 def update_category(
     category_id: int,
     req: CategoryRequest,
-    user: Annotated[User, Depends(auth_lib.authenticated_user)],
-    category_service: Annotated[CategoryService, Depends(get_category_svc)],
+    user: Annotated[User, Depends(dependencies.get_current_user)],
+    category_repository: Annotated[CategoryRepository, Depends(dependencies.get_category_repository)],
 ):
     try:
-        category = category_service.update_category(user.tenant_id, category_id, req.name, req.description)
-    except CategoryNotFoundException as e:
+        category = category_repository.update(user.tenant_id, category_id, req.name, req.description)
+    except ResourceNotFoundException as e:
         raise HTTPException(404, detail="Category not found") from e
+    except CategoryAlreadyExists as e:
+        raise HTTPException(409, detail="Category already exists") from e
 
-    return JSONResponse({"data": category.to_dict()}, 200)
+    return JSONResponse({"data": asdict(category)})

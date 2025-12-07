@@ -29,3 +29,4 @@ class Category:
     id: int
     name: str
     description: str
+    tenant_id: int
