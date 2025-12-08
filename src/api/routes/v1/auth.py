@@ -1,7 +1,9 @@
+from dataclasses import asdict
 from typing import Annotated
 
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -9,6 +11,9 @@ from api.dependencies import get_authentication_service
 from api.dependencies import get_registration_service
 from application.services.authentication_service import AuthenticationService
 from application.services.registration_service import RegistrationService
+from domain.exceptions import AuthError
+from domain.exceptions import PhoneNumberTakenException
+from domain.exceptions import RegistrationError
 
 router = APIRouter(prefix="/auth")
 
@@ -32,7 +37,10 @@ async def initiate_registration(
     req: RegisterUserRequest,
     registration_service: Annotated[RegistrationService, Depends(get_registration_service)],
 ):
-    token = registration_service.initiate_registration(req.phone_number, req.name)
+    try:
+        token = registration_service.initiate_registration(req.phone_number, req.name)
+    except PhoneNumberTakenException:
+        raise HTTPException(409, detail="Phone number taken")
 
     # send task to celery
     print(token)
@@ -40,14 +48,19 @@ async def initiate_registration(
     return JSONResponse({"detail": "A confirmation link was sent to your phone"})
 
 
-@router.get("/validation", name="user_validation")
+@router.post("/validation", name="user_validation")
 async def register(
     token: str,
     registration_service: Annotated[RegistrationService, Depends(get_registration_service)],
 ):
-    user = registration_service.register(token)
+    try:
+        user = registration_service.register(token)
+    except RegistrationError as e:
+        raise HTTPException(422, detail="Invalid token") from e
+    except PhoneNumberTakenException as e:
+        raise HTTPException(409, detail="Phone number taken") from e
 
-    return JSONResponse({"data": user})
+    return JSONResponse({"data": asdict(user)})
 
 
 @router.post("/pin")
@@ -68,5 +81,9 @@ async def create_session(
     req: NewSessionRequest,
     authentication_service: Annotated[AuthenticationService, Depends(get_authentication_service)],
 ):
-    jwt_token = authentication_service.authorize_user(req.phone_number, req.pin)
+    try:
+        jwt_token = authentication_service.authorize_user(req.phone_number, req.pin)
+    except AuthError as e:
+        raise HTTPException(422, detail="Invalid PIN") from e
+
     return JSONResponse({"token": jwt_token})

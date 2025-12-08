@@ -20,6 +20,14 @@ class BillRepository(Protocol):
         value_range: tuple[float] | None = None,
     ) -> Generator[Bill]: ...
     def get_by_id(self, tenant_id: int, bill_id: int) -> Bill: ...
+    def update(
+        self,
+        tenant_id: int,
+        bill_id: int,
+        date: datetime.datetime | None = None,
+        value: float | None = None,
+        category_id: int | None = None,
+    ) -> Bill: ...
 
 
 @runtime_checkable
@@ -40,3 +48,4 @@ class TenantRepository(Protocol):
 class UserRepository(Protocol):
     def get_by_phone_number(self, phone_number: str) -> User | None: ...
     def get_by_id(self, user_id: int) -> User: ...
+    def create(self, phone_number: str, name: str, tenant_id: int) -> User: ...

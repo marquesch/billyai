@@ -2,6 +2,22 @@ class ResourceNotFoundException(Exception):
     pass
 
 
+class UserNotFoundException(ResourceNotFoundException):
+    pass
+
+
+class CategoryNotFoundException(ResourceNotFoundException):
+    pass
+
+
+class BillNotFoundException(ResourceNotFoundException):
+    pass
+
+
+class KeyNotFoundException(ResourceNotFoundException):
+    pass
+
+
 class AuthError(Exception):
     pass
 
@@ -22,5 +38,5 @@ class PhoneNumberTakenException(RegistrationError):
     pass
 
 
-class CategoryAlreadyExists(Exception):
+class CategoryAlreadyExistsException(Exception):
     pass

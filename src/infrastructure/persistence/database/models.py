@@ -4,6 +4,7 @@ from sqlalchemy import Float
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
 from sqlalchemy import String
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import mapped_column
@@ -33,9 +34,6 @@ class DBTenant(Base):
     bills = relationship("DBBill", back_populates="tenant")
     categories = relationship("DBCategory", back_populates="tenant")
 
-    def __init__(self, tenant: Tenant):
-        self.id = tenant.id
-
     def to_entity(self):
         return Tenant(id=self.id)
 
@@ -44,7 +42,7 @@ class DBUser(Base, TenantMixin):
     __tablename__ = "user"
 
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    phone_number = Column(String, nullable=False)
+    phone_number = Column(String, nullable=False, unique=True, index=True)
     name = Column(String, nullable=True)
 
     def to_entity(self):
@@ -63,12 +61,17 @@ class DBBill(Base, TenantMixin):
 
     def to_entity(self):
         return Bill(
-            id=self.id, value=self.value, date=self.date, category_id=self.category_id, tenant_id=self.tenant_id
+            id=self.id,
+            value=self.value,
+            date=self.date,
+            category_id=self.category_id,
+            tenant_id=self.tenant_id,
         )
 
 
 class DBCategory(Base, TenantMixin):
     __tablename__ = "category"
+    __table_args__ = (UniqueConstraint("name", "tenant_id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)

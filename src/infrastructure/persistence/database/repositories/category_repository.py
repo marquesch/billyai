@@ -3,8 +3,8 @@ from collections.abc import Generator
 from sqlalchemy.exc import IntegrityError
 
 from domain.entities import Category
-from domain.exceptions import CategoryAlreadyExists
-from domain.exceptions import ResourceNotFoundException
+from domain.exceptions import CategoryAlreadyExistsException
+from domain.exceptions import CategoryNotFoundException
 from infrastructure.persistence.database.models import DBCategory
 from infrastructure.persistence.database.repositories import DBRepository
 
@@ -18,7 +18,7 @@ class DBCategoryRepository(DBRepository):
         try:
             self.session.flush()
         except IntegrityError:
-            raise CategoryAlreadyExists
+            raise CategoryAlreadyExistsException
 
         self.session.refresh(db_category)
 
@@ -32,7 +32,7 @@ class DBCategoryRepository(DBRepository):
         db_category = self.session.query(DBCategory).filter_by(tenant_id=tenant_id, name=category_name).first()
 
         if db_category is None:
-            raise ResourceNotFoundException
+            raise CategoryNotFoundException
 
         return db_category.to_entity()
 
@@ -40,7 +40,7 @@ class DBCategoryRepository(DBRepository):
         db_category = self.session.query(DBCategory).filter_by(tenant_id=tenant_id, id=category_id).first()
 
         if db_category is None:
-            raise ResourceNotFoundException
+            raise CategoryNotFoundException
 
         return db_category.to_entity()
 
@@ -54,7 +54,7 @@ class DBCategoryRepository(DBRepository):
         db_category = self.session.query(DBCategory).filter_by(tenant_id=tenant_id, id=category_id).first()
 
         if db_category is None:
-            raise ResourceNotFoundException
+            raise CategoryNotFoundException
 
         if name is not None:
             db_category.name = name
@@ -65,6 +65,6 @@ class DBCategoryRepository(DBRepository):
         try:
             self.session.flush()
         except IntegrityError as e:
-            raise CategoryAlreadyExists from e
+            raise CategoryAlreadyExistsException from e
 
         return db_category.to_entity()

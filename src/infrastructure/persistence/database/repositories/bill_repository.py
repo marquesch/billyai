@@ -2,12 +2,20 @@ import datetime
 from collections.abc import Generator
 
 from domain.entities import Bill
-from domain.exceptions import ResourceNotFoundException
+from domain.exceptions import BillNotFoundException
 from infrastructure.persistence.database.models import DBBill
 from infrastructure.persistence.database.repositories import DBRepository
 
 
 class DBBillRepository(DBRepository):
+    def _get_bill_or_raise(self, tenant_id: int, bill_id: int) -> DBBill:
+        db_bill = self.session.query(DBBill).filter_by(tenant_id=tenant_id, id=bill_id).first()
+
+        if db_bill is None:
+            raise BillNotFoundException
+
+        return db_bill
+
     def create(self, tenant_id: int, date: datetime.datetime, value: float, category_id: int | None = None) -> Bill:
         db_bill = DBBill(tenant_id=tenant_id, date=date, value=value, category_id=category_id)
 
@@ -41,6 +49,27 @@ class DBBillRepository(DBRepository):
         db_bill = self.session.query(DBBill).filter_by(tenant_id=tenant_id, id=bill_id).first()
 
         if db_bill is None:
-            raise ResourceNotFoundException
+            raise BillNotFoundException
+
+        return db_bill.to_entity()
+
+    def update(
+        self,
+        tenant_id: int,
+        bill_id: int,
+        date: datetime.datetime | None = None,
+        value: float | None = None,
+        category_id: int | None = None,
+    ) -> Bill:
+        db_bill = self._get_bill_or_raise(tenant_id, bill_id)
+
+        if date is not None:
+            db_bill.date = date
+
+        if value is not None:
+            db_bill.value = value
+
+        if category_id is not None:
+            db_bill.category_id = category_id
 
         return db_bill.to_entity()

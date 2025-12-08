@@ -1,9 +1,9 @@
 import secrets
 
 from domain.entities import User
+from domain.exceptions import KeyNotFoundException
 from domain.exceptions import PhoneNumberTakenException
 from domain.exceptions import RegistrationError
-from domain.exceptions import ResourceNotFoundException
 from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import TemporaryStorageService
@@ -36,18 +36,12 @@ class RegistrationService:
     def register(self, token: str) -> User:
         try:
             user_data = self.temporary_storage_service.get(token)
-        except ResourceNotFoundException:
+        except KeyNotFoundException:
             raise RegistrationError("Invalid token")
 
-        user = self.user_repository.get_by_phone_number(user_data.get("phone_number"))
-
-        if user is not None:
-            self.temporary_storage_service.delete(token)
-            raise PhoneNumberTakenException
-
         tenant = self.tenant_repository.create()
-        user = self.user_repository.create(user_data.get("phone_number"), user_data.get("name"), tenant_id=tenant.id)
 
         self.temporary_storage_service.delete(token)
+        user = self.user_repository.create(tenant_id=tenant.id, **user_data)
 
         return user

@@ -5,14 +5,15 @@ from string import Template
 from domain.entities import User
 from domain.exceptions import AuthError
 from domain.exceptions import DecodingError
-from domain.exceptions import ResourceNotFoundException
+from domain.exceptions import KeyNotFoundException
+from domain.exceptions import UserNotFoundException
 from domain.ports.repositories import UserRepository
 from domain.ports.services import TemporaryStorageService
 from domain.ports.services import UserEncodingService
 
 USER_PIN_TEMPLATE = Template("user:$user_id:pin")
-USER_PIN_TTL_SECONDS = 1800
-USER_TOKEN_TTL = 1800
+USER_PIN_TTL_SECONDS = 18000
+USER_TOKEN_TTL = 18000
 
 
 class AuthenticationService:
@@ -26,24 +27,19 @@ class AuthenticationService:
         self.temporary_storage_service = temporary_storage_service
         self.user_encoding_service = user_encoding_service
 
-    def _get_user_by_phone_number(self, phone_number: str) -> User:
-        try:
-            return self.user_repository.get_by_phone_number(phone_number)
-        except ResourceNotFoundException as e:
-            raise AuthError("User not found") from e
-
     def authenticate_user(self, token: str) -> User:
         try:
             phone_number = self.user_encoding_service.decode(token)
         except DecodingError as e:
-            raise AuthError("Decoding error") from e
+            raise AuthError("Invalid token") from e
 
-        user = self._get_user_by_phone_number(phone_number)
-
-        return user
+        return self.user_repository.get_by_phone_number(phone_number)
 
     def initiate_authorization(self, phone_number: str) -> str:
-        user = self._get_user_by_phone_number(phone_number)
+        user = self.user_repository.get_by_phone_number(phone_number)
+
+        if user is None:
+            raise UserNotFoundException
 
         pin = "".join(random.choice(string.digits) for _ in range(6))
         user_data = {"pin": pin, "user_phone": user.phone_number}
@@ -54,14 +50,16 @@ class AuthenticationService:
         return pin
 
     def authorize_user(self, phone_number: str, pin: str) -> str:
-        user = self._get_user_by_phone_number(phone_number)
+        user = self.user_repository.get_by_phone_number(phone_number)
 
+        temp_storage_key = USER_PIN_TEMPLATE.substitute(user_id=user.id)
         try:
-            user_data = self.temporary_storage_service.get(USER_PIN_TEMPLATE.substitute(user_id=user.id))
-        except ResourceNotFoundException:
-            raise AuthError("Invalid PIN")
+            user_data = self.temporary_storage_service.get(temp_storage_key)
+        except KeyNotFoundException as e:
+            raise AuthError("Invalid PIN") from e
 
         if user_data["pin"] != pin:
             raise AuthError("Invalid PIN")
 
+        self.temporary_storage_service.delete(temp_storage_key)
         return self.user_encoding_service.encode(phone_number, USER_TOKEN_TTL)

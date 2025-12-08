@@ -3,7 +3,7 @@ from typing import Any
 
 import redis
 
-from domain.exceptions import ResourceNotFoundException
+from domain.exceptions import KeyNotFoundException
 from infrastructure.config import settings
 
 pool = redis.ConnectionPool(host=settings.app_settings.redis_host, port=settings.app_settings.redis_port, db=0)
@@ -21,7 +21,7 @@ class RedisTemporaryStorageService:
         json_data = self.client.get(key)
 
         if json_data is None:
-            raise ResourceNotFoundException
+            raise KeyNotFoundException
 
         return json.loads(json_data)
 

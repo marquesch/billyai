@@ -11,9 +11,10 @@ class Environment(Enum):
 
 class Settings(BaseSettings):
     environment: Environment = Environment.DEVELOPMENT
-    database_url: str = ""
-    redis_host: str = ""
-    redis_port: int
+    database_url: str = "postgresql+psycopg2://billy:billy@postgres:5432/billy?sslmode=disable"
+    redis_host: str = "redis"
+    redis_port: int = 6379
+    deepseek_api_key: str = ""
 
     @property
     def debug(self):
