@@ -6,12 +6,12 @@ from fastapi import Depends
 from fastapi.exceptions import HTTPException
 from pydantic import BaseModel
 
-from api import dependencies
 from domain.entities import User
 from domain.exceptions import BillNotFoundException
 from domain.exceptions import CategoryNotFoundException
 from domain.ports.repositories import BillRepository
 from domain.ports.repositories import CategoryRepository
+from presentation.api import dependencies
 
 router = APIRouter(prefix="/bills")
 

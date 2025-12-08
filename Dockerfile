@@ -9,4 +9,4 @@ COPY pyproject.toml /app
 RUN uv pip compile pyproject.toml > requirements.txt
 RUN uv pip install --system -r requirements.txt
 
-CMD uv run uvicorn api:app --host 0.0.0.0 --port 8080 --reload
+CMD uv run uvicorn presentation.api:app --host 0.0.0.0 --port 8080 --reload

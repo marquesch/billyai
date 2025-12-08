@@ -7,13 +7,13 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from api.dependencies import get_authentication_service
-from api.dependencies import get_registration_service
 from application.services.authentication_service import AuthenticationService
 from application.services.registration_service import RegistrationService
 from domain.exceptions import AuthError
 from domain.exceptions import PhoneNumberTakenException
 from domain.exceptions import RegistrationError
+from presentation.api.dependencies import get_authentication_service
+from presentation.api.dependencies import get_registration_service
 
 router = APIRouter(prefix="/auth")
 

@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
-from api.routes.v1 import auth
-from api.routes.v1 import bill
-from api.routes.v1 import category
+from presentation.api.routes.v1 import auth
+from presentation.api.routes.v1 import bill
+from presentation.api.routes.v1 import category
 
 router = APIRouter(prefix="/v1")
 
