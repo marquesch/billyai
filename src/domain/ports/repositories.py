@@ -11,12 +11,12 @@ from domain.entities import User
 
 @runtime_checkable
 class BillRepository(Protocol):
-    def create(self, tenant_id: int, date: datetime.datetime, value: float, category_id: int | None = None) -> Bill: ...
+    def create(self, tenant_id: int, date: datetime.date, value: float, category_id: int | None = None) -> Bill: ...
     def get_many(
         self,
         tenant_id: int,
         category_id: int | None = None,
-        date_range: tuple[datetime.datetime, datetime.datetime] | None = None,
+        date_range: tuple[datetime.date, datetime.date] | None = None,
         value_range: tuple[float, float] | None = None,
     ) -> Generator[Bill]: ...
     def get_by_id(self, tenant_id: int, bill_id: int) -> Bill: ...
@@ -24,7 +24,7 @@ class BillRepository(Protocol):
         self,
         tenant_id: int,
         bill_id: int,
-        date: datetime.datetime | None = None,
+        date: datetime.date | None = None,
         value: float | None = None,
         category_id: int | None = None,
     ) -> Bill: ...

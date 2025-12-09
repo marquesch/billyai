@@ -22,7 +22,7 @@ class AgentDependencies:
 
 agent = Agent(
     "deepseek:deepseek-chat",
-    instructions="Talk to the user by his name only if he's registered. If the user is not registered yet, try to register him. Ask his name if it's not clear. Ask for user consent before registering him. Be polite, but concise in your messages. Avoid small talk.",
+    instructions="Talk to the user by his name only if he's registered. If the user is not registered yet, try to register him. Ask his name if it's not clear. Ask for user consent before registering him. Be polite, but concise in your messages. Avoid small talk. Avoind using the default category. Prefer to use a custom one instead.",
     deps_type=AgentDependencies,
 )
 
@@ -52,7 +52,7 @@ def get_user_name(ctx: RunContext[str]) -> str:
     return ctx.deps.user.name
 
 
-def create_category(
+def register_category(
     ctx: RunContext[AgentDependencies],
     name: str,
     description: str,
@@ -84,7 +84,7 @@ def get_all_categories(ctx: RunContext[AgentDependencies]) -> list[dict]:
 
 def register_bill(
     ctx: RunContext[AgentDependencies],
-    date: datetime.datetime,
+    date: datetime.date,
     value: float,
     category_id: int,
 ) -> Bill:
@@ -92,7 +92,7 @@ def register_bill(
 
     Args:
         value (float): the value of the bill
-        date (datetime.datetime): the date of the bill
+        date (datetime.date): the date of the bill
         category_id (int): the id of a category to link the bill to
 
     Returns:
@@ -105,7 +105,7 @@ def register_bill(
 def edit_bill(
     ctx: RunContext[AgentDependencies],
     bill_id: int,
-    date: datetime.datetime | None = None,
+    date: datetime.date | None = None,
     value: float | None = None,
     category_id: int | None = None,
 ):
@@ -113,7 +113,7 @@ def edit_bill(
 
     Args:
         bill_id (int): the id of the bill to be editted
-        date (datetime.datetime, optional): an optional new date for the bill.
+        date (datetime.date, optional): an optional new date for the bill.
         value (float, optional): an optional new value of the bill to edit,
         category_id (int, optional): an optional category_id to assign a new category.
 
@@ -126,14 +126,14 @@ def edit_bill(
 
 def get_bills(
     ctx: RunContext[AgentDependencies],
-    date_range: tuple[datetime.datetime, datetime.datetime] | None = None,
+    date_range: tuple[datetime.date, datetime.date] | None = None,
     category_id: int | None = None,
     value_range: tuple[float, float] | None = None,
 ) -> list[Bill]:
     """Returns bills with optional filters. Limited to 10 bills each time.
 
     Args:
-        date_range (tuple[datetime.datetime, datetime.datetime], optional): an optional date range (two dates) to filter the bills by their date
+        date_range (tuple[datetime.date, datetime.date], optional): an optional date range (two dates) to filter the bills by their date
         category_id (int, optional): an optional id of a category to filter bills by their category
         value_range (tuple[float, float], optional): an optional value range (two floats) to filter bills by their value
     Return:
@@ -143,14 +143,14 @@ def get_bills(
     return ctx.deps.agent_service.get_bills(category_id, date_range, value_range)
 
 
-def get_time_now():
-    """Returns what time is now
+def get_today():
+    """Returns a date object representing the current day
 
     Return:
-        str: an ISO formatted string representing the current moment in time
+        datetime.date: a date representing the current day
 
     """
-    return datetime.datetime.now().isoformat()
+    return datetime.date.today()
 
 
 registered_toolset = FunctionToolset(
@@ -161,6 +161,7 @@ registered_toolset = FunctionToolset(
         register_category,
         get_all_categories,
         edit_bill,
+        get_today,
     ],
 )
 unregistered_toolset = FunctionToolset(tools=[register_user])
@@ -168,41 +169,41 @@ unregistered_toolset = FunctionToolset(tools=[register_user])
 if __name__ == "__main__":
     from infrastructure.persistence.database.repositories.bill_repository import DBBillRepository
     from infrastructure.persistence.database.repositories.category_repository import DBCategoryRepository
-    from infrastructure.persistence.database.repositories.user_repository import DBUserRepository
     from infrastructure.persistence.database.repositories.tenant_repository import DBTenantRepository
+    from infrastructure.persistence.database.repositories.user_repository import DBUserRepository
+
     phone_number = input("Phone number: ")
 
-    session = next(db_session())
+    with db_session() as session:
+        user_repo = DBUserRepository(session)
+        category_repo = DBCategoryRepository(session)
+        bill_repo = DBBillRepository(session)
+        tenant_repo = DBTenantRepository(session)
 
-    user_repo = DBUserRepository(session)
-    category_repo = DBCategoryRepository(session)
-    bill_repo = DBBillRepository(session)
-    tenant_repo = DBTenantRepository(session)
+        user = user_repo.get_by_phone_number(phone_number)
+        agent_service = AIAgentService(phone_number, user, user_repo, bill_repo, category_repo, tenant_repo)
+        deps = AgentDependencies(agent_service, user)
 
-    agent_service = AIAgentService(phone_number, user_repo, bill_repo, category_repo, tenant_repo)
-    user = user_repo.get_by_phone_number(phone_number)
-    deps = AgentDependencies(agent_service, user)
+        print(f"User is {'REGISTERED' if user is not None else 'UNREGISTERED'}")
 
-    print(f"User is {'REGISTERED' if user is not None else 'UNREGISTERED'}")
-
-    input_msg = input("You: ")
-    print()
-    message_history = []
-
-    while input_msg != "exit":
-        toolset = unregistered_toolset
-        if deps.user is not None:
-            toolset = registered_toolset
-        result = agent.run_sync(
-            input_msg,
-            message_history=message_history,
-            deps=deps,
-            toolsets=[toolset],
-        )
-        print(f"LLM: {result.output}")
-        print()
-        message_history = result.all_messages()
         input_msg = input("You: ")
         print()
+        message_history = []
 
-    print("exitting")
+        while input_msg != "exit":
+            toolset = unregistered_toolset
+            if deps.user is not None:
+                toolset = registered_toolset
+            result = agent.run_sync(
+                input_msg,
+                message_history=message_history,
+                deps=deps,
+                toolsets=[toolset],
+            )
+            print(f"LLM: {result.output}")
+            print()
+            message_history = result.all_messages()
+            input_msg = input("You: ")
+            print()
+
+        print("exitting")

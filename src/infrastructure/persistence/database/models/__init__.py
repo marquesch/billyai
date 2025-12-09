@@ -1,5 +1,5 @@
 from sqlalchemy import Column
-from sqlalchemy import DateTime
+from sqlalchemy import Date
 from sqlalchemy import Float
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
@@ -14,6 +14,8 @@ from domain.entities import Bill
 from domain.entities import Category
 from domain.entities import Tenant
 from domain.entities import User
+
+__all__ = ["DBBill", "DBCategory", "DBTenant", "DBUser"]
 
 Base = declarative_base()
 
@@ -54,7 +56,7 @@ class DBBill(Base, TenantMixin):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     value = Column(Float, nullable=False)
-    date = Column(DateTime, nullable=False)
+    date = Column(Date, nullable=False)
 
     category_id = Column(Integer, ForeignKey("category.id"), nullable=True)
     category = relationship("DBCategory", back_populates="bills")

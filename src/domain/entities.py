@@ -19,7 +19,7 @@ class User:
 class Bill:
     id: int
     value: float
-    date: datetime.datetime
+    date: datetime.date
     category_id: int
     tenant_id: int
 

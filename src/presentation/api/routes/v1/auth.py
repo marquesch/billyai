@@ -1,3 +1,4 @@
+import re
 from typing import Annotated
 
 from fastapi import APIRouter
@@ -5,6 +6,8 @@ from fastapi import Depends
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from pydantic import Field
+from pydantic import field_validator
 
 from application.services.authentication_service import AuthenticationService
 from application.services.registration_service import RegistrationService
@@ -17,24 +20,36 @@ from presentation.api.dependencies import get_registration_service
 router = APIRouter(prefix="/auth")
 
 
-class RegisterUserRequest(BaseModel):
+class PhoneNumberRequestMixin:
+    phone_number: str = Field(
+        pattern=r"^\(?([1-9]{2})\)?[\s-]?(?:9\d{4}|[2-5]\d{3})[\s-]?\d{4}$",
+    )
+
+    @field_validator("phone_number")
+    @classmethod
+    def format_phone_number(cls, v: str) -> str:
+        return re.sub(r"\D", "", v)
+
+
+class RegisterRequest(BaseModel, PhoneNumberRequestMixin):
     name: str
-    phone_number: str
 
 
-class NewSessionRequest(BaseModel):
-    phone_number: str
+class VerifyLoginRequest(BaseModel, PhoneNumberRequestMixin):
     pin: str
 
 
-class NewPINRequest(BaseModel):
-    phone_number: str
+class LoginRequest(BaseModel, PhoneNumberRequestMixin):
+    pass
 
 
-@router.post("/user")
-async def initiate_registration(
-    req: RegisterUserRequest,
-    registration_service: Annotated[RegistrationService, Depends(get_registration_service)],
+@router.post("/register")
+async def register(
+    req: RegisterRequest,
+    registration_service: Annotated[
+        RegistrationService,
+        Depends(get_registration_service),
+    ],
 ):
     try:
         token = registration_service.initiate_registration(req.phone_number, req.name)
@@ -47,10 +62,13 @@ async def initiate_registration(
     return JSONResponse({"detail": "A confirmation link was sent to your phone"})
 
 
-@router.post("/validation", name="user_validation")
-async def register(
+@router.post("/register/verify")
+async def verify_registration(
     token: str,
-    registration_service: Annotated[RegistrationService, Depends(get_registration_service)],
+    registration_service: Annotated[
+        RegistrationService,
+        Depends(get_registration_service),
+    ],
 ):
     try:
         user = registration_service.register(token)
@@ -62,10 +80,13 @@ async def register(
     return user
 
 
-@router.post("/pin")
-async def create_pin(
-    req: NewPINRequest,
-    authentication_service: Annotated[AuthenticationService, Depends(get_authentication_service)],
+@router.post("/login")
+async def login(
+    req: LoginRequest,
+    authentication_service: Annotated[
+        AuthenticationService,
+        Depends(get_authentication_service),
+    ],
 ):
     pin = authentication_service.initiate_authorization(req.phone_number)
 
@@ -75,10 +96,13 @@ async def create_pin(
     return JSONResponse({"message": "A PIN was sent to your phone"})
 
 
-@router.post("/session")
-async def create_session(
-    req: NewSessionRequest,
-    authentication_service: Annotated[AuthenticationService, Depends(get_authentication_service)],
+@router.post("/login/verify")
+async def verify_login(
+    req: VerifyLoginRequest,
+    authentication_service: Annotated[
+        AuthenticationService,
+        Depends(get_authentication_service),
+    ],
 ):
     try:
         jwt_token = authentication_service.authorize_user(req.phone_number, req.pin)

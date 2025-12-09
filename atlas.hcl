@@ -1,7 +1,7 @@
 data "external_schema" "sqlalchemy" {
   program = [
     "atlas-provider-sqlalchemy",
-    "--path", "./src",
+    "--path", "./src/infrastructure/persistence/database/models",
     "--dialect", "postgresql",
   ]
 }
@@ -10,7 +10,7 @@ env "sqlalchemy" {
   src = data.external_schema.sqlalchemy.url
   dev = "docker://postgres/16/dev?search_path=public"
   migration {
-    dir = "file://src/infrastructure/persistence/database/migrations"
+    dir = "file://migrations"
   }
   format {
     migrate {

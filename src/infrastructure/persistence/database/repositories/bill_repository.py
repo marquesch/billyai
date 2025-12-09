@@ -16,7 +16,7 @@ class DBBillRepository(DBRepository):
 
         return db_bill
 
-    def create(self, tenant_id: int, date: datetime.datetime, value: float, category_id: int | None = None) -> Bill:
+    def create(self, tenant_id: int, date: datetime.date, value: float, category_id: int | None = None) -> Bill:
         db_bill = DBBill(tenant_id=tenant_id, date=date, value=value, category_id=category_id)
 
         self.session.add(db_bill)
@@ -28,7 +28,7 @@ class DBBillRepository(DBRepository):
     def get_many(
         self,
         tenant_id: int,
-        date_range: tuple[datetime.datetime, datetime.datetime] | None = None,
+        date_range: tuple[datetime.date, datetime.date] | None = None,
         category_id: int | None = None,
         value_range: tuple[float, float] | None = None,
     ) -> Generator[Bill]:
@@ -57,7 +57,7 @@ class DBBillRepository(DBRepository):
         self,
         tenant_id: int,
         bill_id: int,
-        date: datetime.datetime | None = None,
+        date: datetime.date | None = None,
         value: float | None = None,
         category_id: int | None = None,
     ) -> Bill:

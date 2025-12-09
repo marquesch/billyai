@@ -17,7 +17,7 @@ router = APIRouter(prefix="/bills")
 
 
 class BillRequest(BaseModel):
-    date: datetime.datetime
+    date: datetime.date
     value: float
     category_id: int | None
 
