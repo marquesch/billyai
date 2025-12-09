@@ -15,9 +15,9 @@ class BillRepository(Protocol):
     def get_many(
         self,
         tenant_id: int,
-        date_range: tuple[datetime.datetime] | None = None,
         category_id: int | None = None,
-        value_range: tuple[float] | None = None,
+        date_range: tuple[datetime.datetime, datetime.datetime] | None = None,
+        value_range: tuple[float, float] | None = None,
     ) -> Generator[Bill]: ...
     def get_by_id(self, tenant_id: int, bill_id: int) -> Bill: ...
     def update(

@@ -28,9 +28,9 @@ class DBBillRepository(DBRepository):
     def get_many(
         self,
         tenant_id: int,
-        date_range: tuple[datetime.datetime] | None = None,
+        date_range: tuple[datetime.datetime, datetime.datetime] | None = None,
         category_id: int | None = None,
-        value_range: tuple[float] | None = None,
+        value_range: tuple[float, float] | None = None,
     ) -> Generator[Bill]:
         query = self.session.query(DBBill).filter_by(tenant_id=tenant_id)
 

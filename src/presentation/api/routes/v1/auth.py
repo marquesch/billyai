@@ -1,4 +1,3 @@
-from dataclasses import asdict
 from typing import Annotated
 
 from fastapi import APIRouter
@@ -60,7 +59,7 @@ async def register(
     except PhoneNumberTakenException as e:
         raise HTTPException(409, detail="Phone number taken") from e
 
-    return JSONResponse({"data": asdict(user)})
+    return user
 
 
 @router.post("/pin")
