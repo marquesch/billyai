@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 
 from domain.entities import User
 from domain.exceptions import PhoneNumberTakenException
-from domain.exceptions import ResourceNotFoundException
+from domain.exceptions import UserNotFoundException
 from infrastructure.persistence.database.models import DBUser
 from infrastructure.persistence.database.repositories import DBRepository
 
@@ -17,7 +17,7 @@ class DBUserRepository(DBRepository):
         db_user = self.session.query(DBUser).get(user_id)
 
         if db_user is None:
-            raise ResourceNotFoundException
+            raise UserNotFoundException
 
         return db_user.to_entity()
 
@@ -31,6 +31,19 @@ class DBUserRepository(DBRepository):
         except IntegrityError as e:
             raise PhoneNumberTakenException from e
 
+        self.session.refresh(db_user)
+
+        return db_user.to_entity()
+
+    def update(self, user_id: int, tenant_id: int, name: str) -> User:
+        db_user = self.session.query(DBUser).filter_by(tenant_id=tenant_id, id=user_id).first()
+
+        if db_user is None:
+            raise UserNotFoundException
+
+        db_user.name = name
+
+        self.session.flush()
         self.session.refresh(db_user)
 
         return db_user.to_entity()

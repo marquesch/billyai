@@ -5,18 +5,25 @@ from pydantic_ai import Agent
 from pydantic_ai import FunctionToolset
 from pydantic_ai import RunContext
 
-from application.services.ai_agent_service import AIAgentService
 from domain.entities import Bill
 from domain.entities import Category
 from domain.entities import User
 from domain.exceptions import CategoryAlreadyExistsException
 from domain.exceptions import PhoneNumberTakenException
+from domain.ports.repositories import BillRepository
+from domain.ports.repositories import CategoryRepository
+from domain.ports.repositories import TenantRepository
+from domain.ports.repositories import UserRepository
 from infrastructure.persistence.database import db_session
 
 
 @dataclass
 class AgentDependencies:
-    agent_service: AIAgentService
+    user_repository: UserRepository
+    bill_repository: BillRepository
+    category_repository: CategoryRepository
+    tenant_repository: TenantRepository
+    phone_number: str
     user: User
 
 
@@ -36,8 +43,21 @@ def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User | 
         User | None: User if user was successfully registered. None otherwise.
 
     """
+    tenant = ctx.deps.tenant_repository.create()
+
+    default_category = ctx.deps.category_repository.create(
+        tenant.id,
+        "default",
+        "Default category, for everything that doesn't fit other categories",
+    )
+
     try:
-        ctx.deps.user = ctx.deps.agent_service.create_user(user_name)
+        ctx.deps.user = ctx.deps.user_repository.create(
+            phone_number=ctx.deps.phone_number,
+            name=user_name,
+            tenant_id=tenant.id,
+        )
+        return ctx.deps.user
     except PhoneNumberTakenException:
         return None
 
@@ -67,7 +87,7 @@ def register_category(
 
     """
     try:
-        return ctx.deps.agent_service.create_category(name, description)
+        return ctx.deps.category_repository.create(ctx.deps.user.tenant_id, name, description)
     except CategoryAlreadyExistsException:
         return None
 
@@ -79,7 +99,7 @@ def get_all_categories(ctx: RunContext[AgentDependencies]) -> list[dict]:
         list[Category]: A list of all categories from a tenant.
 
     """
-    return ctx.deps.agent_service.get_all_categories()
+    return ctx.deps.category_repository.get_all(ctx.deps.user.tenant_id)
 
 
 def register_bill(
@@ -99,7 +119,7 @@ def register_bill(
         Bill: A dataclass representing the bill
 
     """
-    return ctx.deps.agent_service.create_bill(date, value, category_id)
+    return ctx.deps.bill_repository.create(ctx.deps.user.tenant_id, date, value, category_id)
 
 
 def edit_bill(
@@ -121,7 +141,7 @@ def edit_bill(
         Bill: A dataclass representing the bill
 
     """
-    return ctx.deps.agent_service.update_bill(bill_id, date, value, category_id)
+    return ctx.deps.bill_repository.update(ctx.deps.user.tenant_id, bill_id, date, value, category_id)
 
 
 def get_bills(
@@ -140,7 +160,7 @@ def get_bills(
         list[Bill]: a list of Bill, a dataclass representing a bill
 
     """
-    return ctx.deps.agent_service.get_bills(category_id, date_range, value_range)
+    return ctx.deps.bill_repository.get_many(ctx.deps.user.tenant_id, category_id, date_range, value_range)
 
 
 def get_today():
@@ -181,8 +201,13 @@ if __name__ == "__main__":
         tenant_repo = DBTenantRepository(session)
 
         user = user_repo.get_by_phone_number(phone_number)
-        agent_service = AIAgentService(phone_number, user, user_repo, bill_repo, category_repo, tenant_repo)
-        deps = AgentDependencies(agent_service, user)
+
+        deps = AgentDependencies(
+            user_repository=user_repo,
+            bill_repository=bill_repo,
+            category_repository=category_repo,
+            user=user,
+        )
 
         print(f"User is {'REGISTERED' if user is not None else 'UNREGISTERED'}")
 

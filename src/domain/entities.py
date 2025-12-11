@@ -1,5 +1,12 @@
 import datetime
 from dataclasses import dataclass
+from enum import Enum
+
+
+class MessageAuthor(Enum):
+    USER = "user"
+    BILLY = "billy"
+    SYSTEM = "system"
 
 
 @dataclass
@@ -29,4 +36,15 @@ class Category:
     id: int
     name: str
     description: str
+    tenant_id: int
+
+
+@dataclass
+class Message:
+    id: int
+    body: str
+    author: str
+    datetime: datetime.datetime
+    external_message_id: str | None
+    user_id: int
     tenant_id: int

@@ -13,6 +13,7 @@ from application.services.registration_service import RegistrationService
 from domain.exceptions import AuthError
 from domain.ports.repositories import BillRepository
 from domain.ports.repositories import CategoryRepository
+from domain.ports.repositories import MessageRepository
 from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import TemporaryStorageService
@@ -21,6 +22,7 @@ from infrastructure.config import settings
 from infrastructure.persistence.database import db_session
 from infrastructure.persistence.database.repositories.bill_repository import DBBillRepository
 from infrastructure.persistence.database.repositories.category_repository import DBCategoryRepository
+from infrastructure.persistence.database.repositories.message_repository import DBMessageRepository
 from infrastructure.persistence.database.repositories.tenant_repository import DBTenantRepository
 from infrastructure.persistence.database.repositories.user_repository import DBUserRepository
 from infrastructure.services.jwt_encoding_service import JWTUserEncodingService
@@ -74,6 +76,14 @@ def get_category_repository(session: Annotated[Session, Depends(get_session)]) -
             return None
         case _:
             return DBCategoryRepository(session)
+
+
+def get_message_repository(session: Annotated[Session, Depends(get_session)]) -> MessageRepository:
+    match settings.app_settings.environment:
+        case "testing":
+            return None
+        case _:
+            return DBMessageRepository(session)
 
 
 def get_temporary_storage_service(

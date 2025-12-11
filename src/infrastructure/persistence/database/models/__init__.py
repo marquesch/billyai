@@ -1,5 +1,7 @@
 from sqlalchemy import Column
 from sqlalchemy import Date
+from sqlalchemy import DateTime
+from sqlalchemy import Enum
 from sqlalchemy import Float
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
@@ -12,6 +14,8 @@ from sqlalchemy.orm import relationship
 
 from domain.entities import Bill
 from domain.entities import Category
+from domain.entities import Message
+from domain.entities import MessageAuthor
 from domain.entities import Tenant
 from domain.entities import User
 
@@ -46,6 +50,8 @@ class DBUser(Base, TenantMixin):
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     phone_number = Column(String, nullable=False, unique=True, index=True)
     name = Column(String, nullable=True)
+
+    messages = relationship("DBMessage", back_populates="user")
 
     def to_entity(self):
         return User(id=self.id, phone_number=self.phone_number, name=self.name, tenant_id=self.tenant_id)
@@ -83,3 +89,27 @@ class DBCategory(Base, TenantMixin):
 
     def to_entity(self):
         return Category(id=self.id, name=self.name, description=self.description, tenant_id=self.tenant_id)
+
+
+class DBMessage(Base, TenantMixin):
+    __tablename__ = "message"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    body = Column(String, nullable=False)
+    author = Column(Enum(MessageAuthor), nullable=False)
+    timestamp = Column(DateTime, nullable=False)
+    external_message_id = Column(String, nullable=True, unique=True)
+
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    user = relationship("DBUser", back_populates="messages")
+
+    def to_entity(self):
+        return Message(
+            id=self.id,
+            body=self.body,
+            author=self.author,
+            datetime=self.timestamp,
+            external_message_id=self.external_message_id,
+            user_id=self.user_id,
+            tenant_id=self.tenant_id,
+        )

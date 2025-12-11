@@ -5,6 +5,7 @@ from typing import runtime_checkable
 
 from domain.entities import Bill
 from domain.entities import Category
+from domain.entities import Message
 from domain.entities import Tenant
 from domain.entities import User
 
@@ -49,3 +50,18 @@ class UserRepository(Protocol):
     def get_by_phone_number(self, phone_number: str) -> User | None: ...
     def get_by_id(self, user_id: int) -> User: ...
     def create(self, phone_number: str, name: str, tenant_id: int) -> User: ...
+    def update(self, user_id: int, tenant_id: int, name: str) -> User: ...
+
+
+@runtime_checkable
+class MessageRepository(Protocol):
+    def create(
+        self,
+        body: str,
+        author: str,
+        timestamp: datetime.datetime,
+        user_id: int,
+        tenant_id: int,
+        external_message_id: str | None,
+    ) -> Message: ...
+    def get_all(self, user_id: int, tenant_id: int) -> Generator[Message]: ...
