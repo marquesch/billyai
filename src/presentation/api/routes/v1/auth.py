@@ -71,7 +71,7 @@ async def verify_registration(
     ],
 ):
     try:
-        user = registration_service.register(token)
+        user = registration_service.register_from_token(token)
     except RegistrationError as e:
         raise HTTPException(422, detail="Invalid token") from e
     except PhoneNumberTakenException as e:

@@ -11,14 +11,14 @@ pool = redis.ConnectionPool(host=settings.app_settings.redis_host, port=settings
 
 class RedisTemporaryStorageService:
     def __init__(self, redis_client: redis.Redis):
-        self.client = redis_client
+        self._client = redis_client
 
     def set(self, key: str, value: Any, expiration_seconds: int = -1) -> bool:
         json_data = json.dumps(value)
-        return self.client.setex(key, expiration_seconds, json_data)
+        return self._client.setex(key, expiration_seconds, json_data)
 
     def get(self, key: str) -> Any | None:
-        json_data = self.client.get(key)
+        json_data = self._client.get(key)
 
         if json_data is None:
             raise KeyNotFoundException
@@ -26,4 +26,4 @@ class RedisTemporaryStorageService:
         return json.loads(json_data)
 
     def delete(self, key: str) -> bool:
-        return bool(self.client.delete(key))
+        return bool(self._client.delete(key))

@@ -19,6 +19,7 @@ from domain.ports.repositories import UserRepository
 from domain.ports.services import TemporaryStorageService
 from domain.ports.services import UserEncodingService
 from infrastructure.config import settings
+from infrastructure.config.settings import app_settings
 from infrastructure.persistence.database import db_session
 from infrastructure.persistence.database.repositories.bill_repository import DBBillRepository
 from infrastructure.persistence.database.repositories.category_repository import DBCategoryRepository
@@ -109,15 +110,28 @@ def get_authentication_service(
     temporary_storage_service: Annotated[TemporaryStorageService, Depends(get_temporary_storage_service)],
     user_encoding_service: Annotated[UserEncodingService, Depends(get_user_encoding_service)],
 ) -> AuthenticationService:
-    return AuthenticationService(user_repository, temporary_storage_service, user_encoding_service)
+    return AuthenticationService(
+        user_repository,
+        temporary_storage_service,
+        user_encoding_service,
+        app_settings.user_pin_ttl_seconds,
+        app_settings.user_token_ttl,
+    )
 
 
 def get_registration_service(
     user_repository: Annotated[UserRepository, Depends(get_user_repository)],
     tenant_repository: Annotated[UserRepository, Depends(get_tenant_repository)],
+    category_repository: Annotated[CategoryRepository, Depends(get_category_repository)],
     temporary_storage_service: Annotated[TemporaryStorageService, Depends(get_temporary_storage_service)],
 ) -> RegistrationService:
-    return RegistrationService(user_repository, tenant_repository, temporary_storage_service)
+    return RegistrationService(
+        user_repository,
+        tenant_repository,
+        category_repository,
+        temporary_storage_service,
+        app_settings.user_validation_token_ttl_seconds,
+    )
 
 
 def get_current_user(

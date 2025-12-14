@@ -44,7 +44,6 @@ class Message:
     id: int
     body: str
     author: str
-    datetime: datetime.datetime
     external_message_id: str | None
     user_id: int
     tenant_id: int

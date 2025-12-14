@@ -1,0 +1,16 @@
+from collections.abc import Generator
+
+from domain.entities import Category
+from domain.ports.repositories import CategoryRepository
+
+
+class CategoryService:
+    # TODO: create methods (simlpy call repository for now)
+    def __init__(self, category_repository: CategoryRepository):
+        self._category_repository = category_repository
+
+    def create(self, tenant_id: int, name: str, description: str) -> Category: ...
+    def get_all(self, tenant_id: int) -> Generator[Category]: ...
+    def get_by_name(self, tenant_id: int, category_name: str) -> Category: ...
+    def get_by_id(self, tenant_id: int, category_id: int) -> Category: ...
+    def update(self, tenant_id: int, category_id: int, name: str | None, description: str | None) -> Category: ...
