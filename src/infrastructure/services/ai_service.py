@@ -10,20 +10,21 @@ from pydantic_ai.messages import ModelRequest
 from pydantic_ai.messages import ModelResponse
 from pydantic_ai.messages import TextPart
 from pydantic_ai.messages import UserPromptPart
-from pydantic_ai.result import AgentRunResult
 
+from application.services.bill_service import BillService
+from application.services.category_service import CategoryService
 from application.services.registration_service import RegistrationService
 from domain.entities import Bill
 from domain.entities import Category
 from domain.entities import Message
 from domain.entities import MessageAuthor
 from domain.entities import User
+from domain.exceptions import BillNotFoundException
 from domain.exceptions import CategoryAlreadyExistsException
+from domain.exceptions import CategoryNotFoundException
 from domain.exceptions import KeyNotFoundException
 from domain.exceptions import PhoneNumberTakenException
-from domain.ports.repositories import BillRepository
-from domain.ports.repositories import CategoryRepository
-from domain.ports.repositories import TenantRepository
+from domain.ports.repositories import MessageRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import TemporaryStorageService
 
@@ -33,10 +34,8 @@ USER_MESSAGE_HISTORY_KEY_TEMPLATE = Template("user:$user_id:message_history")
 @dataclass
 class AgentDependencies:
     registration_service: RegistrationService
-    user_repository: UserRepository
-    bill_repository: BillRepository
-    category_repository: CategoryRepository
-    tenant_repository: TenantRepository
+    category_service: CategoryService
+    bill_service: BillService
     phone_number: str
     user: User
 
@@ -62,14 +61,14 @@ class AIService:
     def __init__(
         self,
         agent: Agent,
-        toolset: FunctionToolset,
-        # user_repository: UserRepository,
-        # bill_repository: BillRepository,
-        # category_repository: CategoryRepository,
-        # tenant_repository: TenantRepository,
-        # message_repository: MessageRepository,
+        user_toolset: FunctionToolset,
+        guest_toolset: FunctionToolset,
         registration_service: RegistrationService,
         temp_storage_service: TemporaryStorageService,
+        message_repository: MessageRepository,
+        user_repository: UserRepository,
+        bill_service: BillService,
+        category_service: CategoryService,
         phone_number: str,
         message_history_ttl_seconds: int,
     ):
@@ -77,12 +76,17 @@ class AIService:
         self._temp_storage_service = temp_storage_service
 
         self._agent = agent
-        self._toolset = toolset
 
         self._user = user_repository.get_by_phone_number(phone_number)
 
+        self._toolset = user_toolset
+        if self._user is None:
+            self._toolset = guest_toolset
+
         self._agent_dependencies = AgentDependencies(
             registration_service=registration_service,
+            bill_service=bill_service,
+            category_service=category_service,
             phone_number=phone_number,
             user=self._user,
         )
@@ -109,26 +113,26 @@ class AIService:
             messages = self._message_repository.get_all(user_id=self._user.id, tenant_id=self._user.tenant_id)
             return self._convert_message_history_to_pydantic_ai(messages)
 
-    def _cache_user_message_history(self, result: AgentRunResult) -> None:
+    def _cache_user_message_history(self, messages_bytes: bytes) -> None:
         self._temp_storage_service.set(
             USER_MESSAGE_HISTORY_KEY_TEMPLATE.substitute(user_id=self._user.id),
-            result.all_messages_json(),
+            messages_bytes,
             self._message_history_ttl_seconds,
         )
 
-    def run(self, message: Message) -> AgentRunResult:
+    def run(self, message: Message) -> str:
         message_history = self._load_user_message_history()
 
-        result = self._agent.run(
+        result = self._agent.run_sync(
             message.body,
             message_history=message_history,
             deps=self._agent_dependencies,
             toolsets=[self._toolset],
         )
 
-        self._cache_user_message_history(result)
+        self._cache_user_message_history(result.all_messages_json())
 
-        return result
+        return result.output
 
 
 user_toolset = FunctionToolset()
@@ -136,19 +140,19 @@ guest_toolset = FunctionToolset()
 
 
 @guest_toolset.tool
-def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User | None:
+def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User | str:
     """Registers a user into the database.
 
     Args:
         user_name (str): Name of the user
     Returns:
-        User | None: User if user was successfully registered. None otherwise.
+        User | str: User if user was successfully registered or the reason why it failed
 
     """
     try:
         return ctx.deps.registration_service.register(ctx.deps.phone_number, user_name)
     except PhoneNumberTakenException:
-        return None
+        return "Phone number taken"
 
 
 @user_toolset.tool
@@ -167,20 +171,20 @@ def register_category(
     ctx: RunContext[AgentDependencies],
     name: str,
     description: str,
-) -> Category:
+) -> Category | str:
     """Registers a category for a user.
 
     Args:
         name (str): the name of the category
         description (str): a description of the category
     Returns:
-        Category | None: Category if one was successfully created. None otherwise.
+        Category | str: Category if one was successfully created or the reason why it failed to create one
 
     """
     try:
-        return ctx.deps.category_repository.create(ctx.deps.user.tenant_id, name, description)
+        return ctx.deps.category_service.create(ctx.deps.user.tenant_id, name, description)
     except CategoryAlreadyExistsException:
-        return None
+        return "Category with this name already exists"
 
 
 @user_toolset.tool
@@ -191,7 +195,7 @@ def get_all_categories(ctx: RunContext[AgentDependencies]) -> list[dict]:
         list[Category]: A list of all categories from a tenant.
 
     """
-    return ctx.deps.category_repository.get_all(ctx.deps.user.tenant_id)
+    return ctx.deps.category_service.get_all(ctx.deps.user.tenant_id)
 
 
 @user_toolset.tool
@@ -200,7 +204,7 @@ def register_bill(
     date: datetime.date,
     value: float,
     category_id: int,
-) -> Bill:
+) -> Bill | str:
     """Registers an expense for a user.
 
     Args:
@@ -209,10 +213,13 @@ def register_bill(
         category_id (int): the id of a category to link the bill to
 
     Returns:
-        Bill: A dataclass representing the bill
+        Bill | str: A dataclass representing the bill or a reason why it failed
 
     """
-    return ctx.deps.bill_repository.create(ctx.deps.user.tenant_id, date, value, category_id)
+    try:
+        return ctx.deps.bill_service.create(ctx.deps.user.tenant_id, date, value, category_id)
+    except CategoryNotFoundException:
+        return "Category not found"
 
 
 @user_toolset.tool
@@ -222,7 +229,7 @@ def edit_bill(
     date: datetime.date | None = None,
     value: float | None = None,
     category_id: int | None = None,
-):
+) -> Bill | str:
     """Edits a bill by its id
 
     Args:
@@ -232,10 +239,15 @@ def edit_bill(
         category_id (int, optional): an optional category_id to assign a new category.
 
     Returns:
-        Bill: A dataclass representing the bill
+        Bill | str: A dataclass representing the bill or a reason why it failed
 
     """
-    return ctx.deps.bill_repository.update(ctx.deps.user.tenant_id, bill_id, date, value, category_id)
+    try:
+        return ctx.deps.bill_service.update(ctx.deps.user.tenant_id, bill_id, date, value, category_id)
+    except CategoryNotFoundException:
+        return "Category not found"
+    except BillNotFoundException:
+        return "Bill not found"
 
 
 @user_toolset.tool
@@ -255,7 +267,7 @@ def get_bills(
         list[Bill]: a list of Bill, a dataclass representing a bill
 
     """
-    return ctx.deps.bill_repository.get_many(ctx.deps.user.tenant_id, category_id, date_range, value_range)
+    return ctx.deps.bill_service.get_many(ctx.deps.user.tenant_id, category_id, date_range, value_range)
 
 
 @user_toolset.tool

@@ -9,6 +9,8 @@ from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 
 from application.services.authentication_service import AuthenticationService
+from application.services.bill_service import BillService
+from application.services.category_service import CategoryService
 from application.services.registration_service import RegistrationService
 from domain.exceptions import AuthError
 from domain.ports.repositories import BillRepository
@@ -132,6 +134,19 @@ def get_registration_service(
         temporary_storage_service,
         app_settings.user_validation_token_ttl_seconds,
     )
+
+
+def get_category_service(
+    category_repository: Annotated[CategoryRepository, Depends(get_category_repository)],
+) -> CategoryService:
+    return CategoryService(category_repository)
+
+
+def get_bill_service(
+    bill_repository: Annotated[BillRepository, Depends(get_bill_repository)],
+    category_repository: Annotated[CategoryRepository, Depends(get_category_repository)],
+) -> BillService:
+    return BillService(bill_repository, category_repository)
 
 
 def get_current_user(
