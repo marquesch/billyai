@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Any
 from typing import Protocol
 from typing import runtime_checkable
@@ -15,7 +16,13 @@ class UserEncodingService(Protocol):
     def encode(self, phone_number: str) -> str: ...
     def decode(self, token: str) -> str: ...
 
+
 @runtime_checkable
 class AIAgentService(Protocol):
-    # TODO: Create ai_agent_service that instantiates an agent and uses it to respond to messages
-    ...
+    async def run(self, message_body: str, phone_number: str) -> str: ...
+
+
+@runtime_checkable
+class AMQPService(Protocol):
+    async def consume(self, queue_name: str, callback: Callable) -> None: ...
+    async def publish(self, message: dict, queue_name: str) -> None: ...

@@ -108,7 +108,7 @@ class DBMessage(Base, TenantMixin):
             id=self.id,
             body=self.body,
             author=self.author,
-            datetime=self.timestamp,
+            timestamp=self.timestamp,
             external_message_id=self.external_message_id,
             user_id=self.user_id,
             tenant_id=self.tenant_id,

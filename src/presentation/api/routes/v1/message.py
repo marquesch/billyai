@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from domain.entities import MessageAuthor
 from domain.entities import User
 from domain.ports.repositories import MessageRepository
+from infrastructure.async_tasks.ai_tasks import run_agent
 from presentation.api import dependencies
 
 router = APIRouter(prefix="/messages")
@@ -26,7 +27,7 @@ def index(
 
 
 @router.post("/")
-def create(
+async def create(
     req: MessageRequest,
     user: Annotated[User, Depends(dependencies.get_current_user)],
     message_repository: Annotated[MessageRepository, Depends(dependencies.get_message_repository)],
@@ -40,6 +41,6 @@ def create(
         external_message_id=None,
     )
 
-    # send task/chain to process in background
+    await run_agent.delay(message_body=message.body, phone_number=user.phone_number)
 
     return message

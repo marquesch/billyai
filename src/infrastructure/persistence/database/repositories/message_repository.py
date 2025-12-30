@@ -14,7 +14,7 @@ class DBMessageRepository(DBRepository):
         timestamp: datetime.datetime,
         user_id: int,
         tenant_id: int,
-        external_message_id: str | None,
+        external_message_id: str | None = None,
     ) -> Message:
         message = DBMessage(
             body=body,

@@ -2,6 +2,7 @@ from collections.abc import Generator
 from typing import Annotated
 
 import redis
+from aio_pika import RobustChannel
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
@@ -28,10 +29,14 @@ from infrastructure.persistence.database.repositories.category_repository import
 from infrastructure.persistence.database.repositories.message_repository import DBMessageRepository
 from infrastructure.persistence.database.repositories.tenant_repository import DBTenantRepository
 from infrastructure.persistence.database.repositories.user_repository import DBUserRepository
+from infrastructure.services.aio_pika_amqp_service import AioPikaAMQPMessagingService
+from infrastructure.services.aio_pika_amqp_service import AioPikaPoolService
 from infrastructure.services.jwt_encoding_service import JWTUserEncodingService
 from infrastructure.services.redis_temporary_storage_service import RedisTemporaryStorageService
 
 security = HTTPBearer()
+
+aio_pika_pool_service = AioPikaPoolService(app_settings.rabbitmq_url)
 
 
 def get_session() -> Generator[Session, None, None]:
@@ -157,3 +162,11 @@ def get_current_user(
         return authentication_service.authenticate_user(credentials.credentials)
     except AuthError as e:
         raise HTTPException(401) from e
+
+
+async def get_amqp_channel() -> RobustChannel:
+    return await aio_pika_pool_service.get_channel()
+
+
+def get_amqp_service(channel: Annotated[RobustChannel, Depends(get_amqp_channel)]):
+    return AioPikaAMQPMessagingService(channel)

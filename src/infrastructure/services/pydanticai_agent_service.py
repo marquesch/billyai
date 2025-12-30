@@ -57,41 +57,43 @@ agent = Agent(
 )
 
 
-class AIService:
+class PydanticAIAgentService:
     def __init__(
         self,
-        agent: Agent,
-        user_toolset: FunctionToolset,
-        guest_toolset: FunctionToolset,
         registration_service: RegistrationService,
         temp_storage_service: TemporaryStorageService,
         message_repository: MessageRepository,
         user_repository: UserRepository,
         bill_service: BillService,
         category_service: CategoryService,
-        phone_number: str,
         message_history_ttl_seconds: int,
     ):
+        self._user_repository = user_repository
         self._message_repository = message_repository
+        self._registration_service = registration_service
+        self._bill_service = bill_service
+        self._category_service = category_service
+        self._message_history_ttl_seconds = message_history_ttl_seconds
+
         self._temp_storage_service = temp_storage_service
 
         self._agent = agent
 
-        self._user = user_repository.get_by_phone_number(phone_number)
+        self._user_toolset = user_toolset
+        self._guest_toolset = guest_toolset
 
-        self._toolset = user_toolset
-        if self._user is None:
-            self._toolset = guest_toolset
+    def _get_user(self, phone_number: str):
+        user = self._user_repository.get_by_phone_number(phone_number)
+        return user
 
-        self._agent_dependencies = AgentDependencies(
-            registration_service=registration_service,
-            bill_service=bill_service,
-            category_service=category_service,
+    def _load_agent_dependencies(self, user: User | None, phone_number: str):
+        return AgentDependencies(
+            registration_service=self._registration_service,
+            bill_service=self._bill_service,
+            category_service=self._category_service,
             phone_number=phone_number,
-            user=self._user,
+            user=user,
         )
-
-        self._message_history_ttl_seconds = message_history_ttl_seconds
 
     def _convert_message_history_to_pydantic_ai(self, messages: list[Message]) -> list[ModelMessage]:
         pydantic_messages = []
@@ -104,33 +106,37 @@ class AIService:
 
         return pydantic_messages
 
-    def _load_user_message_history(self) -> list[ModelMessage]:
+    def _load_user_message_history(self, user: User) -> list[ModelMessage]:
         try:
             return self._temp_storage_service.get(
-                USER_MESSAGE_HISTORY_KEY_TEMPLATE.substitute(user_id=self._user.id),
+                USER_MESSAGE_HISTORY_KEY_TEMPLATE.substitute(user_id=user.id),
             )
         except KeyNotFoundException:
-            messages = self._message_repository.get_all(user_id=self._user.id, tenant_id=self._user.tenant_id)
+            messages = self._message_repository.get_all(user_id=user.id, tenant_id=user.tenant_id)
             return self._convert_message_history_to_pydantic_ai(messages)
 
-    def _cache_user_message_history(self, messages_bytes: bytes) -> None:
+    def _cache_user_message_history(self, user: User, messages_bytes: bytes) -> None:
         self._temp_storage_service.set(
-            USER_MESSAGE_HISTORY_KEY_TEMPLATE.substitute(user_id=self._user.id),
+            USER_MESSAGE_HISTORY_KEY_TEMPLATE.substitute(user_id=user.id),
             messages_bytes,
             self._message_history_ttl_seconds,
         )
 
-    def run(self, message: Message) -> str:
-        message_history = self._load_user_message_history()
+    async def run(self, message_body: str, phone_number: str) -> str:
+        user = self._get_user(phone_number)
+        agent_dependencies = self._load_agent_dependencies(user, phone_number)
+        toolset = guest_toolset if user is None else user_toolset
 
-        result = self._agent.run_sync(
-            message.body,
+        message_history = self._load_user_message_history(user) if user is not None else []
+
+        result = await self._agent.run(
+            message_body,
             message_history=message_history,
-            deps=self._agent_dependencies,
-            toolsets=[self._toolset],
+            deps=agent_dependencies,
+            toolsets=[toolset],
         )
 
-        self._cache_user_message_history(result.all_messages_json())
+        self._cache_user_message_history(user, result.all_messages_json())
 
         return result.output
 

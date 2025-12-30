@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     user_validation_token_ttl_seconds: int = 86400
     user_pin_ttl_seconds: int = 86400
     user_token_ttl: int = 86400
+    async_task_routing_key: str = "async_tasks"
 
     @property
     def debug(self):

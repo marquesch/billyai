@@ -62,6 +62,6 @@ class MessageRepository(Protocol):
         timestamp: datetime.datetime,
         user_id: int,
         tenant_id: int,
-        external_message_id: str | None,
+        external_message_id: str | None = None,
     ) -> Message: ...
     def get_all(self, user_id: int, tenant_id: int) -> Generator[Message]: ...

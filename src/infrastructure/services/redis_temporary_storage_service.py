@@ -14,7 +14,7 @@ class RedisTemporaryStorageService:
         self._client = redis_client
 
     def set(self, key: str, value: Any, expiration_seconds: int = -1) -> bool:
-        json_data = json.dumps(value)
+        json_data = json.dumps(value) if type(value) != bytes else value
         return self._client.setex(key, expiration_seconds, json_data)
 
     def get(self, key: str) -> Any | None:
