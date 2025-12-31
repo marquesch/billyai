@@ -34,7 +34,7 @@ class DBMessageRepository(DBRepository):
     def get_all(self, user_id: int, tenant_id: int) -> Generator[Message]:
         query = (
             self.session.query(DBMessage)
-            .filter_by(id=user_id, tenant_id=tenant_id)
+            .filter_by(user_id=user_id, tenant_id=tenant_id)
             .order_by(DBMessage.timestamp.desc())
         )
-        return (message.to_entity for message in query)
+        return (message.to_entity() for message in query)

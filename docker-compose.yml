@@ -25,7 +25,7 @@ services:
     command: "python -u async.py"
 
   postgres:
-    image: postgres:latest
+    image: postgres:17
     environment:
       POSTGRES_USER: billy
       POSTGRES_PASSWORD: billy

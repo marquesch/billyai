@@ -7,8 +7,8 @@ from domain.ports.repositories import CategoryRepository
 
 class BillService:
     def __init__(self, bill_repository: BillRepository, category_repository: CategoryRepository):
-        self._bill_repository: bill_repository
-        self._category_repository: category_repository
+        self._bill_repository = bill_repository
+        self._category_repository = category_repository
 
     def create(self, tenant_id: int, date: datetime.date, value: float, category_id: int | None = None) -> Bill:
         if category_id is not None:

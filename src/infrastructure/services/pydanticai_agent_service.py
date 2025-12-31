@@ -5,6 +5,8 @@ from string import Template
 from pydantic_ai import Agent
 from pydantic_ai import FunctionToolset
 from pydantic_ai import RunContext
+from pydantic_core import to_jsonable_python
+from pydantic_ai import ModelMessagesTypeAdapter
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.messages import ModelRequest
 from pydantic_ai.messages import ModelResponse
@@ -108,9 +110,10 @@ class PydanticAIAgentService:
 
     def _load_user_message_history(self, user: User) -> list[ModelMessage]:
         try:
-            return self._temp_storage_service.get(
+            message_history = self._temp_storage_service.get(
                 USER_MESSAGE_HISTORY_KEY_TEMPLATE.substitute(user_id=user.id),
             )
+            return ModelMessagesTypeAdapter.validate_python(message_history)
         except KeyNotFoundException:
             messages = self._message_repository.get_all(user_id=user.id, tenant_id=user.tenant_id)
             return self._convert_message_history_to_pydantic_ai(messages)
@@ -136,7 +139,7 @@ class PydanticAIAgentService:
             toolsets=[toolset],
         )
 
-        self._cache_user_message_history(user, result.all_messages_json())
+        self._cache_user_message_history(user, to_jsonable_python(result.all_messages()))
 
         return result.output
 

@@ -23,7 +23,7 @@ def index(
     user: Annotated[User, Depends(dependencies.get_current_user)],
     message_repository: Annotated[MessageRepository, Depends(dependencies.get_message_repository)],
 ):
-    return [message for message in message_repository.get_all(user_id=user.id, tenant_id=user.tenant_id)]
+    return list(message_repository.get_all(user_id=user.id, tenant_id=user.tenant_id))
 
 
 @router.post("/")

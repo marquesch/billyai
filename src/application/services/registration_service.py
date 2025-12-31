@@ -21,6 +21,7 @@ class RegistrationService:
     ):
         self._user_repository = user_repository
         self._tenant_repository = tenant_repository
+        self._category_repository = category_repository
         self._temporary_storage_service = temporary_storage_service
         self._user_validation_token_ttl_seconds = user_validation_token_ttl_seconds
 
