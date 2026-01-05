@@ -18,6 +18,10 @@ class KeyNotFoundException(ResourceNotFoundException):
     pass
 
 
+class MessageNotFoundException(ResourceNotFoundException):
+    pass
+
+
 class AuthError(Exception):
     pass
 

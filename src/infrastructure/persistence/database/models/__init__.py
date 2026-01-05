@@ -1,3 +1,4 @@
+from sqlalchemy import Boolean
 from sqlalchemy import Column
 from sqlalchemy import Date
 from sqlalchemy import DateTime
@@ -50,11 +51,18 @@ class DBUser(Base, TenantMixin):
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     phone_number = Column(String, nullable=False, unique=True, index=True)
     name = Column(String, nullable=True)
+    is_registered = Column(Boolean, nullable=False, default=False)
 
     messages = relationship("DBMessage", back_populates="user")
 
     def to_entity(self):
-        return User(id=self.id, phone_number=self.phone_number, name=self.name, tenant_id=self.tenant_id)
+        return User(
+            id=self.id,
+            phone_number=self.phone_number,
+            name=self.name,
+            is_registered=self.is_registered,
+            tenant_id=self.tenant_id,
+        )
 
 
 class DBBill(Base, TenantMixin):

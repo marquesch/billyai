@@ -19,6 +19,7 @@ class User:
     id: int
     phone_number: str
     name: str
+    is_registered: bool
     tenant_id: int
 
 

@@ -28,5 +28,5 @@ class AsyncTask:
         await amqp_service.publish(message, self._routing_key)
 
 
-def task(func: Callable) -> AsyncTask:
+def async_task(func: Callable) -> AsyncTask:
     return AsyncTask(app_settings.async_task_routing_key, func)

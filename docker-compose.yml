@@ -22,7 +22,7 @@ services:
       - postgres
       - rabbitmq
       - redis
-    command: "python -u async.py"
+    command: ["python", "-u", "async.py"]
 
   postgres:
     image: postgres:17

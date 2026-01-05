@@ -10,6 +10,7 @@ import redis
 from application.services.bill_service import BillService
 from application.services.category_service import CategoryService
 from application.services.registration_service import RegistrationService
+from application.use_cases.message.process_message import ProcessMessageUseCase
 from domain.ports.repositories import BillRepository
 from domain.ports.repositories import CategoryRepository
 from domain.ports.repositories import MessageRepository
@@ -144,21 +145,25 @@ async def setup_global_registry() -> None:
         factory=lambda db_session: DBUserRepository(db_session),
         dependencies=[SessionLocal],
     )
+
     global_registry.register(
         BillRepository,
         factory=lambda db_session: DBBillRepository(db_session),
         dependencies=[SessionLocal],
     )
+
     global_registry.register(
         CategoryRepository,
         factory=lambda db_session: DBCategoryRepository(db_session),
         dependencies=[SessionLocal],
     )
+
     global_registry.register(
         CategoryService,
         factory=lambda category_repository: CategoryService(category_repository),
         dependencies=[CategoryRepository],
     )
+
     global_registry.register(
         BillService,
         factory=lambda bill_repository, category_repository: BillService(bill_repository, category_repository),
@@ -170,15 +175,18 @@ async def setup_global_registry() -> None:
         factory=lambda db_session: DBMessageRepository(db_session),
         dependencies=[SessionLocal],
     )
+
     global_registry.register(
         TenantRepository,
         factory=lambda db_session: DBTenantRepository(db_session),
         dependencies=[SessionLocal],
     )
+
     global_registry.register(
         TemporaryStorageService,
         factory=lambda: RedisTemporaryStorageService(redis.Redis(connection_pool=pool)),
     )
+
     global_registry.register(
         RegistrationService,
         factory=lambda user_repository,
@@ -193,6 +201,7 @@ async def setup_global_registry() -> None:
         ),
         dependencies=[UserRepository, TenantRepository, CategoryRepository, TemporaryStorageService],
     )
+
     global_registry.register(
         AIAgentService,
         factory=lambda registration_service,
@@ -216,6 +225,20 @@ async def setup_global_registry() -> None:
             UserRepository,
             BillService,
             CategoryService,
+        ],
+    )
+
+    global_registry.register(
+        ProcessMessageUseCase,
+        factory=lambda user_repository, tenant_repository, message_repository: ProcessMessageUseCase(
+            user_repository=user_repository,
+            tenant_repository=tenant_repository,
+            message_repository=message_repository,
+        ),
+        dependencies=[
+            UserRepository,
+            TenantRepository,
+            MessageRepository,
         ],
     )
 
