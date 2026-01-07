@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from domain.entities import MessageAuthor
 from domain.entities import User
 from domain.ports.repositories import MessageRepository
-from infrastructure.async_tasks.ai_tasks import run_agent
+from infrastructure.async_tasks.ai import run_agent
 from presentation.api import dependencies
 
 router = APIRouter(prefix="/messages")

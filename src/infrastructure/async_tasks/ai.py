@@ -9,12 +9,12 @@ from infrastructure.di import resolve
 
 
 @async_task
-async def run_agent(message_body: str, phone_number: str):
+async def run_agent(message_body: str, user_id: int):
     ai_agent_service: AIAgentService = await resolve(AIAgentService)
     user_repo: UserRepository = await resolve(UserRepository)
     message_repo: MessageRepository = await resolve(MessageRepository)
 
-    user = user_repo.get_by_phone_number(phone_number)
+    user = user_repo.get_by_id(user_id)
     answer = await ai_agent_service.run(message_body, phone_number)
 
     timestamp = datetime.datetime.now(datetime.UTC)

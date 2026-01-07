@@ -5,7 +5,7 @@ from domain.entities import User
 from domain.ports.repositories import MessageRepository
 
 
-class ProcessMessageUseCase:
+class SaveMessageUseCase:
     def __init__(self, message_repository: MessageRepository):
         self._message_repository = message_repository
 

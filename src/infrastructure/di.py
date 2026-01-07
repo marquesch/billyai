@@ -10,7 +10,7 @@ import redis
 from application.services.bill_service import BillService
 from application.services.category_service import CategoryService
 from application.services.registration_service import RegistrationService
-from application.use_cases.message.process_message import ProcessMessageUseCase
+from application.use_cases.message.process_message import SaveMessageUseCase
 from domain.ports.repositories import BillRepository
 from domain.ports.repositories import CategoryRepository
 from domain.ports.repositories import MessageRepository
@@ -229,8 +229,8 @@ async def setup_global_registry() -> None:
     )
 
     global_registry.register(
-        ProcessMessageUseCase,
-        factory=lambda user_repository, tenant_repository, message_repository: ProcessMessageUseCase(
+        SaveMessageUseCase,
+        factory=lambda user_repository, tenant_repository, message_repository: SaveMessageUseCase(
             user_repository=user_repository,
             tenant_repository=tenant_repository,
             message_repository=message_repository,
