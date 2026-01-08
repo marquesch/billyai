@@ -4,14 +4,14 @@ from string import Template
 
 from pydantic_ai import Agent
 from pydantic_ai import FunctionToolset
-from pydantic_ai import RunContext
-from pydantic_core import to_jsonable_python
 from pydantic_ai import ModelMessagesTypeAdapter
+from pydantic_ai import RunContext
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.messages import ModelRequest
 from pydantic_ai.messages import ModelResponse
 from pydantic_ai.messages import TextPart
 from pydantic_ai.messages import UserPromptPart
+from pydantic_core import to_jsonable_python
 
 from application.services.bill_service import BillService
 from application.services.category_service import CategoryService
@@ -25,7 +25,6 @@ from domain.exceptions import BillNotFoundException
 from domain.exceptions import CategoryAlreadyExistsException
 from domain.exceptions import CategoryNotFoundException
 from domain.exceptions import KeyNotFoundException
-from domain.exceptions import PhoneNumberTakenException
 from domain.ports.repositories import MessageRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import TemporaryStorageService
@@ -84,16 +83,11 @@ class PydanticAIAgentService:
         self._user_toolset = user_toolset
         self._guest_toolset = guest_toolset
 
-    def _get_user(self, phone_number: str):
-        user = self._user_repository.get_by_phone_number(phone_number)
-        return user
-
-    def _load_agent_dependencies(self, user: User | None, phone_number: str):
+    def _load_agent_dependencies(self, user: User | None):
         return AgentDependencies(
             registration_service=self._registration_service,
             bill_service=self._bill_service,
             category_service=self._category_service,
-            phone_number=phone_number,
             user=user,
         )
 
@@ -125,12 +119,11 @@ class PydanticAIAgentService:
             self._message_history_ttl_seconds,
         )
 
-    async def run(self, message_body: str, phone_number: str) -> str:
-        user = self._get_user(phone_number)
-        agent_dependencies = self._load_agent_dependencies(user, phone_number)
-        toolset = guest_toolset if user is None else user_toolset
+    async def run(self, message_body: str, user: User) -> str:
+        agent_dependencies = self._load_agent_dependencies(user)
+        toolset = user_toolset if user.is_registered else guest_toolset
 
-        message_history = self._load_user_message_history(user) if user is not None else []
+        message_history = self._load_user_message_history(user)
 
         result = await self._agent.run(
             message_body,
@@ -158,10 +151,7 @@ def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User | 
         User | str: User if user was successfully registered or the reason why it failed
 
     """
-    try:
-        return ctx.deps.registration_service.register(ctx.deps.phone_number, user_name)
-    except PhoneNumberTakenException:
-        return "Phone number taken"
+    return ctx.deps.registration_service.finish_registration(ctx.deps.user.id, name)
 
 
 @user_toolset.tool

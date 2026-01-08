@@ -3,10 +3,15 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+class MessageBroker(Enum):
+    WHATSAPP = "whatsapp"
+    API = "api"
+
+
 class MessageAuthor(Enum):
-    USER = "USER"
-    BILLY = "BILLY"
-    SYSTEM = "SYSTEM"
+    USER = "user"
+    BILLY = "billy"
+    SYSTEM = "system"
 
 
 @dataclass

@@ -17,6 +17,7 @@ from domain.entities import Bill
 from domain.entities import Category
 from domain.entities import Message
 from domain.entities import MessageAuthor
+from domain.entities import MessageBroker
 from domain.entities import Tenant
 from domain.entities import User
 
@@ -105,6 +106,7 @@ class DBMessage(Base, TenantMixin):
     id = Column(Integer, primary_key=True, autoincrement=True)
     body = Column(String, nullable=False)
     author = Column(Enum(MessageAuthor), nullable=False)
+    broker = Column(Enum(MessageBroker), nullable=False)
     timestamp = Column(DateTime, nullable=False)
     external_message_id = Column(String, nullable=True, unique=True)
 
@@ -117,6 +119,7 @@ class DBMessage(Base, TenantMixin):
             body=self.body,
             author=self.author,
             timestamp=self.timestamp,
+            broker=self.broker,
             external_message_id=self.external_message_id,
             user_id=self.user_id,
             tenant_id=self.tenant_id,
