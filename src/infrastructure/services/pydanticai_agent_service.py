@@ -37,7 +37,6 @@ class AgentDependencies:
     registration_service: RegistrationService
     category_service: CategoryService
     bill_service: BillService
-    phone_number: str
     user: User
 
 
@@ -151,7 +150,7 @@ def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User | 
         User | str: User if user was successfully registered or the reason why it failed
 
     """
-    return ctx.deps.registration_service.finish_registration(ctx.deps.user.id, name)
+    return ctx.deps.registration_service.finish_registration(ctx.deps.user.id, user_name)
 
 
 @user_toolset.tool

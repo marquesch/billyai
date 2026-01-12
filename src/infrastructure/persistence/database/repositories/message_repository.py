@@ -48,4 +48,4 @@ class DBMessageRepository(DBRepository):
         if message is None:
             raise MessageNotFoundException
 
-        return message
+        return message.to_entity()

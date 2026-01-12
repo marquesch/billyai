@@ -33,7 +33,7 @@ class RegistrationService:
 
     def _register_default_category(self, tenant_id: int):
         default_category = self._category_repository.create(
-            tenant.id,
+            tenant_id,
             "default",
             "Default category, for everything that doesn't fit other categories",
         )
@@ -61,11 +61,16 @@ class RegistrationService:
 
         default_category = self._register_default_category(tenant.id)
 
-        return self._user_repository.create(tenant_id=tenant.id, phone_number=phone_number, name=name, registered=True)
+        return self._user_repository.create(
+            tenant_id=tenant.id,
+            phone_number=phone_number,
+            name=name,
+            is_registered=True,
+        )
 
     def finish_registration(self, user_id: int, name: str) -> User:
         user = self._user_repository.get_by_id(user_id)
 
         default_category = self._register_default_category(user.tenant_id)
 
-        return self._user_repository.update(user_id=user_id, tenant_id=user.tenant_id, name=name, registered=True)
+        return self._user_repository.update(user_id=user_id, tenant_id=user.tenant_id, name=name, is_registered=True)

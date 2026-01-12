@@ -5,15 +5,13 @@ from collections.abc import Callable
 from pydantic import BaseModel
 
 from domain.entities import MessageAuthor
+from domain.entities import MessageBroker
 from domain.exceptions import MessageNotFoundException
 from domain.ports.repositories import MessageRepository
 from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import AIAgentService
 from domain.ports.services import AMQPService
-from infrastructure.async_tasks import async_task
-from infrastructure.async_tasks.ai import run_agent
-from infrastructure.async_tasks.realtime import notify_user
 from infrastructure.config.settings import app_settings
 from infrastructure.di import resolve
 
@@ -61,17 +59,25 @@ async def notify_user(message_id: int):
 
 
 @async_task
-async def run_agent(message_body: str, user_id: int):
+async def run_agent(message_id: int):
     ai_agent_service: AIAgentService = await resolve(AIAgentService)
     user_repo: UserRepository = await resolve(UserRepository)
     message_repo: MessageRepository = await resolve(MessageRepository)
 
-    user = user_repo.get_by_id(user_id)
-    answer = await ai_agent_service.run(message_body, user)
+    message = message_repo.get_by_id(message_id)
+    user = user_repo.get_by_id(message.user_id)
+    answer = await ai_agent_service.run(message.body, user)
 
     timestamp = datetime.datetime.now(datetime.UTC)
 
-    message = message_repo.create(answer, MessageAuthor.BILLY.value, timestamp, user.id, user.tenant_id)
+    message = message_repo.create(
+        body=answer,
+        author=MessageAuthor.BILLY,
+        timestamp=timestamp,
+        broker=message.broker,
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+    )
 
     await process_message.delay(message_id=message.id)
 
@@ -88,16 +94,25 @@ async def process_message(message_id: int):
     await notify_user.delay(message_id=message.id)
 
     if message.author == MessageAuthor.USER.value:
-        await run_agent.delay(message_body=message.body, user_id=message.user_id)
+        await run_agent.delay(message_id=message.id)
+
+    elif message.broker == MessageBroker.WHATSAPP.value:
+        await send_message.delay(message_id=message.id)
 
 
 @async_task
-async def process_incoming_message(payload: dict):
+async def process_incoming_message(message_id: str, message_body: str, phone_number: str, timestamp: str):
     message_repo: MessageRepository = await resolve(MessageRepository)
     user_repo: UserRepository = await resolve(UserRepository)
     tenant_repo: TenantRepository = await resolve(TenantRepository)
+    timestamp = datetime.datetime.fromisoformat(timestamp)
 
-    whatsapp_message = IncomingWhatsappMessage(**payload)
+    whatsapp_message = IncomingWhatsappMessage(
+        message_id=message_id,
+        message_body=message_body,
+        phone_number=phone_number,
+        timestamp=timestamp,
+    )
 
     user = user_repo.get_by_phone_number(whatsapp_message.phone_number)
 
@@ -107,13 +122,14 @@ async def process_incoming_message(payload: dict):
             phone_number=whatsapp_message.phone_number,
             name="",
             tenant_id=tenant.id,
-            registered=False,
+            is_registered=False,
         )
 
     message = message_repo.create(
         body=whatsapp_message.message_body,
-        author=MessageAuthor.USER.value,
+        author=MessageAuthor.USER,
         timestamp=whatsapp_message.timestamp,
+        broker=MessageBroker.WHATSAPP,
         user_id=user.id,
         tenant_id=user.tenant_id,
     )

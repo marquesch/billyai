@@ -31,6 +31,6 @@ class AioPikaAMQPMessagingService:
 
         await queue.consume(callback_fn, no_ack=True)
 
-    async def publish(self, message: dict, routing_key: str) -> None:
+    async def publish(self, message: dict, queue_name: str) -> None:
         payload = json.dumps(message).encode("utf-8")
-        await self._channel.default_exchange.publish(aio_pika.Message(body=payload), routing_key)
+        await self._channel.default_exchange.publish(aio_pika.Message(body=payload), queue_name)
