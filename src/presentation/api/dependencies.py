@@ -19,6 +19,7 @@ from domain.ports.repositories import CategoryRepository
 from domain.ports.repositories import MessageRepository
 from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
+from domain.ports.services import PubsubService
 from domain.ports.services import TemporaryStorageService
 from domain.ports.services import UserEncodingService
 from infrastructure.config import settings
@@ -32,6 +33,7 @@ from infrastructure.persistence.database.repositories.user_repository import DBU
 from infrastructure.services.aio_pika_amqp_service import AioPikaAMQPMessagingService
 from infrastructure.services.aio_pika_amqp_service import AioPikaPoolService
 from infrastructure.services.jwt_encoding_service import JWTUserEncodingService
+from infrastructure.services.redis_pubsub_service import RedisPubsubService
 from infrastructure.services.redis_temporary_storage_service import RedisTemporaryStorageService
 
 security = HTTPBearer()
@@ -46,12 +48,6 @@ def get_session() -> Generator[Session, None, None]:
 
     with db_session() as session:
         yield session
-
-
-def get_redis_client() -> redis.Redis:
-    from infrastructure.services.redis_temporary_storage_service import pool
-
-    return redis.Redis(connection_pool=pool)
 
 
 def get_tenant_repository(session: Annotated[Session, Depends(get_session)]) -> TenantRepository:
@@ -94,14 +90,14 @@ def get_message_repository(session: Annotated[Session, Depends(get_session)]) ->
             return DBMessageRepository(session)
 
 
-def get_temporary_storage_service(
-    redis_client: Annotated[redis.Redis, Depends(get_redis_client)],
-) -> TemporaryStorageService:
+def get_temporary_storage_service() -> TemporaryStorageService:
+    from infrastructure.services.redis_temporary_storage_service import redis_pool
+
     match settings.app_settings.environment:
         case "testing":
             return None
         case _:
-            return RedisTemporaryStorageService(redis_client)
+            return RedisTemporaryStorageService(redis.Redis(connection_pool=redis_pool))
 
 
 def get_user_encoding_service() -> UserEncodingService:
@@ -170,3 +166,10 @@ async def get_amqp_channel() -> RobustChannel:
 
 def get_amqp_service(channel: Annotated[RobustChannel, Depends(get_amqp_channel)]):
     return AioPikaAMQPMessagingService(channel)
+
+
+async def get_pubsub_service() -> PubsubService:
+    from infrastructure.services.redis_pubsub_service import async_redis_pool
+
+    if app_settings.environment != "testing":
+        return RedisPubsubService(client=redis.asyncio.Redis(connection_pool=async_redis_pool))

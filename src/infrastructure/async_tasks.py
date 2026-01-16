@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import inspect
 from collections.abc import Callable
@@ -12,6 +13,7 @@ from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import AIAgentService
 from domain.ports.services import AMQPService
+from domain.ports.services import PubsubService
 from infrastructure.config.settings import app_settings
 from infrastructure.di import resolve
 
@@ -54,8 +56,19 @@ def async_task(func: Callable) -> AsyncTask:
 
 @async_task
 async def notify_user(message_id: int):
-    # TODO: notify user using websocket
-    return
+    pubsub: PubsubService = await resolve(PubsubService)
+    message_repo: MessageRepository = await resolve(MessageRepository)
+
+    message = message_repo.get_by_id(message_id)
+    message_data = {
+        "id": message.id,
+        "author": message.author,
+        "body": message.body,
+        "timestamp": message.timestamp.isoformat(),
+        "broker": message.broker,
+    }
+
+    await pubsub.publish(channel=str(message.tenant_id), event="new-message", data=message_data)
 
 
 @async_task
@@ -84,6 +97,7 @@ async def run_agent(message_id: int):
 
 @async_task
 async def process_message(message_id: int):
+    await asyncio.sleep(2)
     message_repo: MessageRepository = await resolve(MessageRepository)
 
     try:

@@ -6,6 +6,7 @@ from fastapi import Depends
 from pydantic import BaseModel
 
 from domain.entities import MessageAuthor
+from domain.entities import MessageBroker
 from domain.entities import User
 from domain.ports.repositories import MessageRepository
 from infrastructure.async_tasks import process_message
@@ -38,6 +39,7 @@ async def create(
         timestamp=datetime.datetime.now(),
         user_id=user.id,
         tenant_id=user.tenant_id,
+        broker=MessageBroker.API.value,
         external_message_id=None,
     )
 

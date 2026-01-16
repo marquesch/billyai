@@ -37,7 +37,7 @@ class AuthenticationService:
 
         return self._user_repository.get_by_phone_number(phone_number)
 
-    def initiate_authorization(self, phone_number: str) -> str:
+    def initiate_authorization(self, phone_number: str) -> (str, User):
         user = self._user_repository.get_by_phone_number(phone_number)
 
         if user is None:
@@ -49,7 +49,7 @@ class AuthenticationService:
 
         self._temporary_storage_service.set(key, user_data, self._user_pin_ttl_seconds)
 
-        return pin
+        return pin, user
 
     def authorize_user(self, phone_number: str, pin: str) -> str:
         user = self._user_repository.get_by_phone_number(phone_number)

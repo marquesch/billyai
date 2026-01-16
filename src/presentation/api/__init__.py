@@ -1,16 +1,21 @@
 import asyncio
 from contextlib import asynccontextmanager
+from typing import Annotated
 
 from fastapi import APIRouter
+from fastapi import Depends
 from fastapi import FastAPI
 from fastapi import Request
 from fastapi import WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
+from domain.entities import User
+from domain.ports.services import PubsubService
 from infrastructure.config.settings import app_settings
 from infrastructure.di import global_registry
 from infrastructure.di import setup_global_registry
+from presentation.api import dependencies
 from presentation.api.routes import v1
 
 html = """
@@ -31,7 +36,7 @@ html = """
         <script>
             var client_id = Date.now()
             document.querySelector("#ws-id").textContent = client_id;
-            var ws = new WebSocket(`ws://localhost:8080/ws/${client_id}`);
+            var ws = new WebSocket(`ws://localhost:8080/ws`);
             ws.onmessage = function(event) {
                 var messages = document.getElementById('messages')
                 var message = document.createElement('li')
@@ -81,11 +86,14 @@ async def get():
     return HTMLResponse(html)
 
 
-@app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: int):
+@app.websocket("/ws")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    user: Annotated[User, Depends(dependencies.get_current_user)],
+    pubsub: Annotated[PubsubService, Depends(dependencies.get_pubsub_service)],
+):
     await websocket.accept()
-    import json
+    await pubsub.subscribe(str(user.tenant_id))
 
-    await websocket.send_bytes(json.dumps({"id": 1, "data": {"mas_olha": True}}))
-    await asyncio.sleep(5)
-    await websocket.send_bytes(json.dumps({"id": 1, "data": {"mas_olha": False}}))
+    async for message in pubsub.listen():
+        await websocket.send_text(message)
