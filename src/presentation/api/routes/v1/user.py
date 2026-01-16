@@ -24,6 +24,6 @@ def update_me(
     user_repository: Annotated[UserRepository, Depends(dependencies.get_user_repository)],
 ):
     try:
-        return user_repository.update(user.id, user.tenant_id, req.name)
+        return user_repository.update(user_id=user.id, tenant_id=user.tenant_id, name=req.name, is_registered=True)
     except UserNotFoundException as e:
         raise HTTPException(404, detail="User not found") from e

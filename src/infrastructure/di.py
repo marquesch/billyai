@@ -17,6 +17,7 @@ from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import AIAgentService
 from domain.ports.services import AMQPService
+from domain.ports.services import PubsubService
 from domain.ports.services import TemporaryStorageService
 from infrastructure.config.settings import app_settings
 from infrastructure.persistence.database import SessionLocal
@@ -28,8 +29,10 @@ from infrastructure.persistence.database.repositories.user_repository import DBU
 from infrastructure.services.aio_pika_amqp_service import AioPikaAMQPMessagingService
 from infrastructure.services.aio_pika_amqp_service import AioPikaPoolService
 from infrastructure.services.pydanticai_agent_service import PydanticAIAgentService
+from infrastructure.services.redis_pubsub_service import RedisPubsubService
+from infrastructure.services.redis_pubsub_service import async_redis_pool
 from infrastructure.services.redis_temporary_storage_service import RedisTemporaryStorageService
-from infrastructure.services.redis_temporary_storage_service import pool
+from infrastructure.services.redis_temporary_storage_service import redis_pool
 
 T = TypeVar("T")
 
@@ -144,21 +147,25 @@ async def setup_global_registry() -> None:
         factory=lambda db_session: DBUserRepository(db_session),
         dependencies=[SessionLocal],
     )
+
     global_registry.register(
         BillRepository,
         factory=lambda db_session: DBBillRepository(db_session),
         dependencies=[SessionLocal],
     )
+
     global_registry.register(
         CategoryRepository,
         factory=lambda db_session: DBCategoryRepository(db_session),
         dependencies=[SessionLocal],
     )
+
     global_registry.register(
         CategoryService,
         factory=lambda category_repository: CategoryService(category_repository),
         dependencies=[CategoryRepository],
     )
+
     global_registry.register(
         BillService,
         factory=lambda bill_repository, category_repository: BillService(bill_repository, category_repository),
@@ -170,15 +177,18 @@ async def setup_global_registry() -> None:
         factory=lambda db_session: DBMessageRepository(db_session),
         dependencies=[SessionLocal],
     )
+
     global_registry.register(
         TenantRepository,
         factory=lambda db_session: DBTenantRepository(db_session),
         dependencies=[SessionLocal],
     )
+
     global_registry.register(
         TemporaryStorageService,
-        factory=lambda: RedisTemporaryStorageService(redis.Redis(connection_pool=pool)),
+        factory=lambda: RedisTemporaryStorageService(redis.Redis(connection_pool=redis_pool)),
     )
+
     global_registry.register(
         RegistrationService,
         factory=lambda user_repository,
@@ -193,6 +203,7 @@ async def setup_global_registry() -> None:
         ),
         dependencies=[UserRepository, TenantRepository, CategoryRepository, TemporaryStorageService],
     )
+
     global_registry.register(
         AIAgentService,
         factory=lambda registration_service,
@@ -239,4 +250,9 @@ async def setup_global_registry() -> None:
         AMQPService,
         factory=get_amqp_service,
         dependencies=[AioPikaPoolService],
+    )
+
+    global_registry.register(
+        PubsubService,
+        factory=lambda: RedisPubsubService(client=redis.asyncio.Redis(connection_pool=async_redis_pool)),
     )

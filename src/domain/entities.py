@@ -3,6 +3,11 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+class MessageBroker(Enum):
+    WHATSAPP = "WHATSAPP"
+    API = "API"
+
+
 class MessageAuthor(Enum):
     USER = "USER"
     BILLY = "BILLY"
@@ -19,6 +24,7 @@ class User:
     id: int
     phone_number: str
     name: str
+    is_registered: bool
     tenant_id: int
 
 
@@ -45,6 +51,7 @@ class Message:
     body: str
     author: str
     timestamp: datetime.datetime
+    broker: str
     external_message_id: str | None
     user_id: int
     tenant_id: int

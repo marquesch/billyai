@@ -1,3 +1,4 @@
+import datetime
 import re
 from typing import Annotated
 
@@ -6,14 +7,19 @@ from fastapi import Depends
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from pydantic import Field
 from pydantic import field_validator
 
 from application.services.authentication_service import AuthenticationService
 from application.services.registration_service import RegistrationService
+from domain.entities import MessageAuthor
+from domain.entities import MessageBroker
 from domain.exceptions import AuthError
 from domain.exceptions import PhoneNumberTakenException
 from domain.exceptions import RegistrationError
+from domain.exceptions import UserNotFoundException
+from domain.ports.repositories import MessageRepository
+from infrastructure.async_tasks import process_message
+from presentation.api import dependencies
 from presentation.api.dependencies import get_authentication_service
 from presentation.api.dependencies import get_registration_service
 
@@ -21,9 +27,7 @@ router = APIRouter(prefix="/auth")
 
 
 class PhoneNumberRequestMixin:
-    phone_number: str = Field(
-        pattern=r"^\(?([1-9]{2})\)?[\s-]?(?:9\d{4}|[2-5]\d{3})[\s-]?\d{4}$",
-    )
+    phone_number: str
 
     @field_validator("phone_number")
     @classmethod
@@ -87,11 +91,25 @@ async def login(
         AuthenticationService,
         Depends(get_authentication_service),
     ],
+    message_repository: Annotated[MessageRepository, Depends(dependencies.get_message_repository)],
 ):
-    pin = authentication_service.initiate_authorization(req.phone_number)
+    try:
+        pin, user = authentication_service.initiate_authorization(req.phone_number)
+    except UserNotFoundException as e:
+        raise HTTPException(404, detail="User not found") from e
 
-    # send task to celery
     print(pin)
+
+    message = message_repository.create(
+        body=f"Seu PIN é {pin}",
+        author=MessageAuthor.SYSTEM,
+        timestamp=datetime.datetime.now(datetime.UTC),
+        broker=MessageBroker.WHATSAPP,
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+    )
+
+    await process_message.delay(message_id=message.id)
 
     return JSONResponse({"message": "A PIN was sent to your phone"})
 

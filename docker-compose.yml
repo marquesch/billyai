@@ -1,6 +1,8 @@
 services:
   app:
     build: .
+    networks:
+      - billy_network
     ports:
       - "8080:8080"
     volumes:
@@ -14,6 +16,8 @@ services:
 
   async_tasks:
     build: .
+    networks:
+      - billy_network
     volumes:
       - "./src:/app"
     env_file:
@@ -22,7 +26,7 @@ services:
       - postgres
       - rabbitmq
       - redis
-    command: "python -u async.py"
+    command: ["python", "-u", "async.py"]
 
   postgres:
     image: postgres:17
@@ -30,6 +34,8 @@ services:
       POSTGRES_USER: billy
       POSTGRES_PASSWORD: billy
       POSTGRES_DB: billy
+    networks:
+      - billy_network
     ports:
       - "5432:5432"
     volumes:
@@ -40,11 +46,19 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: billy
       RABBITMQ_DEFAULT_PASS: billy
+    networks:
+      - billy_network
     ports:
       - "15672:15672"
 
   redis:
     image: redis:8.4.0-alpine
+    networks:
+      - billy_network
+
+networks:
+  billy_network:
+    external: true
 
 volumes:
   psql-data:

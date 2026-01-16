@@ -1,3 +1,4 @@
+from sqlalchemy import Boolean
 from sqlalchemy import Column
 from sqlalchemy import Date
 from sqlalchemy import DateTime
@@ -16,6 +17,7 @@ from domain.entities import Bill
 from domain.entities import Category
 from domain.entities import Message
 from domain.entities import MessageAuthor
+from domain.entities import MessageBroker
 from domain.entities import Tenant
 from domain.entities import User
 
@@ -50,11 +52,18 @@ class DBUser(Base, TenantMixin):
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     phone_number = Column(String, nullable=False, unique=True, index=True)
     name = Column(String, nullable=True)
+    is_registered = Column(Boolean, nullable=False, default=False)
 
     messages = relationship("DBMessage", back_populates="user")
 
     def to_entity(self):
-        return User(id=self.id, phone_number=self.phone_number, name=self.name, tenant_id=self.tenant_id)
+        return User(
+            id=self.id,
+            phone_number=self.phone_number,
+            name=self.name,
+            is_registered=self.is_registered,
+            tenant_id=self.tenant_id,
+        )
 
 
 class DBBill(Base, TenantMixin):
@@ -97,6 +106,7 @@ class DBMessage(Base, TenantMixin):
     id = Column(Integer, primary_key=True, autoincrement=True)
     body = Column(String, nullable=False)
     author = Column(Enum(MessageAuthor), nullable=False)
+    broker = Column(Enum(MessageBroker), nullable=False)
     timestamp = Column(DateTime, nullable=False)
     external_message_id = Column(String, nullable=True, unique=True)
 
@@ -107,8 +117,9 @@ class DBMessage(Base, TenantMixin):
         return Message(
             id=self.id,
             body=self.body,
-            author=self.author,
+            author=self.author.value,
             timestamp=self.timestamp,
+            broker=self.broker.value,
             external_message_id=self.external_message_id,
             user_id=self.user_id,
             tenant_id=self.tenant_id,

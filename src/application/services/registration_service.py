@@ -31,6 +31,13 @@ class RegistrationService:
         except KeyNotFoundException:
             raise RegistrationError("Invalid token")
 
+    def _register_default_category(self, tenant_id: int):
+        default_category = self._category_repository.create(
+            tenant_id,
+            "default",
+            "Default category, for everything that doesn't fit other categories",
+        )
+
     def initiate_registration(self, phone_number: str, name: str) -> str:
         if self._user_repository.get_by_phone_number(phone_number) is not None:
             raise PhoneNumberTakenException
@@ -52,10 +59,18 @@ class RegistrationService:
     def register(self, phone_number: str, name: str) -> User:
         tenant = self._tenant_repository.create()
 
-        default_category = self._category_repository.create(
-            tenant.id,
-            "default",
-            "Default category, for everything that doesn't fit other categories",
+        default_category = self._register_default_category(tenant.id)
+
+        return self._user_repository.create(
+            tenant_id=tenant.id,
+            phone_number=phone_number,
+            name=name,
+            is_registered=True,
         )
 
-        return self._user_repository.create(tenant_id=tenant.id, phone_number=phone_number, name=name)
+    def finish_registration(self, user_id: int, name: str) -> User:
+        user = self._user_repository.get_by_id(user_id)
+
+        default_category = self._register_default_category(user.tenant_id)
+
+        return self._user_repository.update(user_id=user_id, tenant_id=user.tenant_id, name=name, is_registered=True)
