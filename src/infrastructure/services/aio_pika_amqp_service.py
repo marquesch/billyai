@@ -18,7 +18,7 @@ class AioPikaPoolService:
             return await connection.channel()
 
 
-class AioPikaAMQPMessagingService:
+class AioPikaAMQPService:
     def __init__(self, channel: aio_pika.Channel):
         self._channel = channel
 

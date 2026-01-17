@@ -7,6 +7,7 @@ from typing import TypeVar
 
 import redis
 
+from application.services.async_task_service import AsyncTaskService
 from application.services.bill_service import BillService
 from application.services.category_service import CategoryService
 from application.services.registration_service import RegistrationService
@@ -17,8 +18,10 @@ from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import AIAgentService
 from domain.ports.services import AMQPService
+from domain.ports.services import AsyncTaskDispatcher
 from domain.ports.services import PubsubService
 from domain.ports.services import TemporaryStorageService
+from domain.ports.services import WhatsappBrokerMessageService
 from infrastructure.config.settings import app_settings
 from infrastructure.persistence.database import SessionLocal
 from infrastructure.persistence.database.repositories.bill_repository import DBBillRepository
@@ -26,8 +29,10 @@ from infrastructure.persistence.database.repositories.category_repository import
 from infrastructure.persistence.database.repositories.message_repository import DBMessageRepository
 from infrastructure.persistence.database.repositories.tenant_repository import DBTenantRepository
 from infrastructure.persistence.database.repositories.user_repository import DBUserRepository
-from infrastructure.services.aio_pika_amqp_service import AioPikaAMQPMessagingService
+from infrastructure.services.aio_pika_amqp_service import AioPikaAMQPService
 from infrastructure.services.aio_pika_amqp_service import AioPikaPoolService
+from infrastructure.services.amqp_async_task_dispatcher import AMQPAsyncTaskDispatcher
+from infrastructure.services.amqp_whatsapp_broker_message_service import AMQPWhatsappBrokerMessageService
 from infrastructure.services.pydanticai_agent_service import PydanticAIAgentService
 from infrastructure.services.redis_pubsub_service import RedisPubsubService
 from infrastructure.services.redis_pubsub_service import async_redis_pool
@@ -244,7 +249,7 @@ async def setup_global_registry() -> None:
     )
 
     async def get_amqp_service(amqp_pool_service: AioPikaPoolService):
-        return AioPikaAMQPMessagingService(await amqp_pool_service.get_channel())
+        return AioPikaAMQPService(await amqp_pool_service.get_channel())
 
     global_registry.register(
         AMQPService,
@@ -255,4 +260,44 @@ async def setup_global_registry() -> None:
     global_registry.register(
         PubsubService,
         factory=lambda: RedisPubsubService(client=redis.asyncio.Redis(connection_pool=async_redis_pool)),
+    )
+
+    global_registry.register(
+        AsyncTaskDispatcher,
+        factory=lambda amqp_service: AMQPAsyncTaskDispatcher(amqp_service=amqp_service),
+        dependencies=[AMQPService],
+    )
+
+    global_registry.register(
+        WhatsappBrokerMessageService,
+        factory=lambda amqp_service: AMQPWhatsappBrokerMessageService(amqp_service=amqp_service),
+        dependencies=[AMQPService],
+    )
+
+    global_registry.register(
+        AsyncTaskService,
+        factory=lambda async_task_dispatcher,
+        message_repo,
+        user_repo,
+        tenant_repo,
+        ai_agent_service,
+        pubsub_service,
+        whatsapp_broker_message_service: AsyncTaskService(
+            async_task_dispatcher=async_task_dispatcher,
+            message_repo=message_repo,
+            user_repo=user_repo,
+            tenant_repo=tenant_repo,
+            ai_agent_service=ai_agent_service,
+            pubsub_service=pubsub_service,
+            whatsapp_broker_message_service=whatsapp_broker_message_service,
+        ),
+        dependencies=[
+            AsyncTaskDispatcher,
+            MessageRepository,
+            UserRepository,
+            TenantRepository,
+            AIAgentService,
+            PubsubService,
+            WhatsappBrokerMessageService,
+        ],
     )
