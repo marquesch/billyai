@@ -50,6 +50,10 @@ def task(func):
     return Task(func)
 
 
+# TODO: Improve async_task_service to distribute between multiple use cases
+# each with their own dependencies.
+# Also, create a simple way to schedule tasks without needing to inject all the
+# dependencies needed to run said them.
 class AsyncTaskService:
     def __init__(
         self,

@@ -18,43 +18,6 @@ from infrastructure.di import setup_global_registry
 from presentation.api import dependencies
 from presentation.api.routes import v1
 
-html = """
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Chat</title>
-    </head>
-    <body>
-        <h1>WebSocket Chat</h1>
-        <h2>Your ID: <span id="ws-id"></span></h2>
-        <form action="" onsubmit="sendMessage(event)">
-            <input type="text" id="messageText" autocomplete="off"/>
-            <button>Send</button>
-        </form>
-        <ul id='messages'>
-        </ul>
-        <script>
-            var client_id = Date.now()
-            document.querySelector("#ws-id").textContent = client_id;
-            var ws = new WebSocket(`ws://localhost:8080/ws`);
-            ws.onmessage = function(event) {
-                var messages = document.getElementById('messages')
-                var message = document.createElement('li')
-                var content = document.createTextNode(event.data)
-                message.appendChild(content)
-                messages.appendChild(message)
-            };
-            function sendMessage(event) {
-                var input = document.getElementById("messageText")
-                ws.send(input.value)
-                input.value = ''
-                event.preventDefault()
-            }
-        </script>
-    </body>
-</html>
-"""
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -79,11 +42,6 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(v1.router)
 
 app.include_router(api_router)
-
-
-@app.get("/demo")
-async def get():
-    return HTMLResponse(html)
 
 
 @app.websocket("/ws")

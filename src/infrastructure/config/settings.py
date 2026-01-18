@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     user_token_ttl: int = 86400
     async_task_routing_key: str = "async_tasks"
     whatsapp_message_routing_key: str = "whatsapp_message"
+    async_task_prefetch_count: int = 5
 
     @property
     def debug(self):

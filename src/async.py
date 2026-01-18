@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import traceback
 
 from application.services.async_task_service import AsyncTaskService
 from domain.ports.services import AMQPService
@@ -18,7 +19,7 @@ async def worker_callback(payload: dict):
 
     logger.info(f"Received task: {task_name}")
 
-    async with global_registry.scope() as di_registry:
+    async with global_registry.scope():
         try:
             async_task_service = await resolve(AsyncTaskService)
 
@@ -33,6 +34,7 @@ async def worker_callback(payload: dict):
 
         except Exception as e:
             logger.exception(f"Error processing task {task_name}: {e}")
+            logger.exception(traceback.format_exc())
 
 
 async def main():
@@ -45,6 +47,8 @@ async def main():
         await amqp_service.consume(
             queue_name=app_settings.async_task_routing_key,
             callback=worker_callback,
+            no_ack=False,
+            prefetch_count=app_settings.async_task_prefetch_count,
         )
 
         await asyncio.Future()

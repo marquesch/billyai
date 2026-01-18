@@ -20,7 +20,13 @@ class AIAgentService(Protocol):
 
 
 class AMQPService(Protocol):
-    async def consume(self, queue_name: str, callback: Callable) -> None: ...
+    async def consume(
+        self,
+        queue_name: str,
+        callback: Callable,
+        no_ack: bool = True,
+        prefetch_count: int | None = None,
+    ) -> None: ...
     async def publish(self, message: dict, queue_name: str) -> None: ...
 
 
