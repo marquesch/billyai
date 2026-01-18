@@ -1,7 +1,6 @@
 import datetime
 from collections.abc import Generator
 from typing import Protocol
-from typing import runtime_checkable
 
 from domain.entities import Bill
 from domain.entities import Category
@@ -10,7 +9,6 @@ from domain.entities import Tenant
 from domain.entities import User
 
 
-@runtime_checkable
 class BillRepository(Protocol):
     def create(self, tenant_id: int, date: datetime.date, value: float, category_id: int | None = None) -> Bill: ...
     def get_many(
@@ -31,7 +29,6 @@ class BillRepository(Protocol):
     ) -> Bill: ...
 
 
-@runtime_checkable
 class CategoryRepository(Protocol):
     def create(self, tenant_id: int, name: str, description: str) -> Category: ...
     def get_all(self, tenant_id: int) -> Generator[Category]: ...
@@ -40,12 +37,10 @@ class CategoryRepository(Protocol):
     def update(self, tenant_id: int, category_id: int, name: str | None, description: str | None) -> Category: ...
 
 
-@runtime_checkable
 class TenantRepository(Protocol):
     def create(self) -> Tenant: ...
 
 
-@runtime_checkable
 class UserRepository(Protocol):
     def get_by_phone_number(self, phone_number: str) -> User | None: ...
     def get_by_id(self, user_id: int) -> User: ...
@@ -53,7 +48,6 @@ class UserRepository(Protocol):
     def update(self, user_id: int, tenant_id: int, name: str, is_registered: bool) -> User: ...
 
 
-@runtime_checkable
 class MessageRepository(Protocol):
     def create(
         self,
