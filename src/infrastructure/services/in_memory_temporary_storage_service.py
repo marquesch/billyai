@@ -1,0 +1,30 @@
+from typing import Any
+from domain.exceptions import KeyNotFoundException
+import json
+import time
+
+
+class InMemoryTemporaryStorageService:
+    def __init__(self):
+        self._database = {}
+
+    def set(self, key: str, value: Any, expiration_seconds: int = -1) -> bool:
+        json_data = json.dumps(value) if type(value) is not bytes else value
+        expiry = time.time() + expiration_seconds
+        self._database[key] = {"ex": expiry, "data": json_data}
+        return True
+
+    def get(self, key: str) -> Any:
+        json_data = self._database.get(key)
+        if json_data is None:
+            raise KeyNotFoundException
+
+        db_data = json.loads(json_data)
+        if db_data["ex"] < time.time():
+            raise KeyNotFoundException
+
+        return db_data["data"]
+
+    def delete(self, key: str) -> bool:
+        db_data = self._database.pop(key, None)
+        return db_data and db_data["ex"] > time.time()
