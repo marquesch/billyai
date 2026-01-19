@@ -3,9 +3,12 @@ from collections.abc import Generator
 
 from domain.entities import Bill
 from domain.exceptions import BillNotFoundException
+from domain.exceptions import CategoryNotFoundException
+from domain.exceptions import TenantNotFoundException
 from infrastructure.persistence.database.models import DBBill
+from infrastructure.persistence.database.models import DBCategory
+from infrastructure.persistence.database.models import DBTenant
 from infrastructure.persistence.database.repositories import DBRepository
-from infrastructure.persistence.database.repositories import InMemoryRepository
 
 
 class DBBillRepository(DBRepository):
@@ -18,6 +21,16 @@ class DBBillRepository(DBRepository):
         return db_bill
 
     def create(self, tenant_id: int, date: datetime.date, value: float, category_id: int | None = None) -> Bill:
+        db_tenant = self.session.query(DBTenant).get(tenant_id)
+
+        if db_tenant is None:
+            raise TenantNotFoundException
+
+        db_category = self.session.query(DBCategory).filter_by(category_id=category_id, tenant_id=tenant_id).first()
+
+        if db_category is None:
+            raise CategoryNotFoundException
+
         db_bill = DBBill(tenant_id=tenant_id, date=date, value=value, category_id=category_id)
 
         self.session.add(db_bill)
@@ -74,74 +87,3 @@ class DBBillRepository(DBRepository):
             db_bill.category_id = category_id
 
         return db_bill.to_entity()
-
-
-class InMemoryBillRepository(InMemoryRepository):
-    def create(self, tenant_id: int, date: datetime.date, value: float, category_id: int | None = None) -> Bill:
-        if tenant_id not in self._tenants:
-            raise ValueError("tenant not found")
-
-        if category_id not in self._categories:
-            raise ValueError("category not found")
-
-        self._bills_id_seq += 1
-        bill = Bill(id=self._bills_id_seq, value=value, date=date, category_id=category_id, tenant_id=tenant_id)
-
-        self._bills[self._bills_id_seq] = bill
-
-        return bill
-
-    def get_many(
-        self,
-        tenant_id: int,
-        date_range: tuple[datetime.date, datetime.date] | None = None,
-        category_id: int | None = None,
-        value_range: tuple[float, float] | None = None,
-    ) -> Generator[Bill]:
-        def filter_bill(bill: Bill):
-            if bill.tenant_id != tenant_id:
-                return False
-
-            if date_range is not None and not date_range[0] <= bill.date <= date_range[1]:
-                return False
-
-            if category_id is not None and bill.category_id != category_id:
-                return False
-
-            if value_range is not None and not value_range[0] <= bill.value <= value_range[1]:
-                return False
-
-            return True
-
-        return (bill for bill in filter(filter_bill, self._bills.values()))
-
-    def get_by_id(self, tenant_id: int, bill_id: int) -> Bill:
-        bill = self._bills.get(bill_id)
-
-        return bill if bill.tenant_id == tenant_id else None
-
-    def update(
-        self,
-        tenant_id: int,
-        bill_id: int,
-        date: datetime.date | None = None,
-        value: float | None = None,
-        category_id: int | None = None,
-    ) -> Bill:
-        bill = self._bills.get(bill_id)
-        if bill is None:
-            raise BillNotFoundException
-
-        if date is not None:
-            bill.date = date
-
-        if value is not None:
-            bill.value = value
-
-        if value is not None:
-            bill.value = value
-
-        if category_id is not None:
-            bill.category_id
-
-        return bill

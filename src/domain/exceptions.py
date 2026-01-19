@@ -14,6 +14,10 @@ class BillNotFoundException(ResourceNotFoundException):
     pass
 
 
+class TenantNotFoundException(ResourceNotFoundException):
+    pass
+
+
 class KeyNotFoundException(ResourceNotFoundException):
     pass
 
