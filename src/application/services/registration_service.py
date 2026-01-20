@@ -28,8 +28,8 @@ class RegistrationService:
     def _get_user_data(self, token: str) -> dict:
         try:
             return self._temporary_storage_service.get(token)
-        except KeyNotFoundException:
-            raise RegistrationError("Invalid token")
+        except KeyNotFoundException as e:
+            raise RegistrationError("Invalid token") from e
 
     def _register_default_category(self, tenant_id: int):
         default_category = self._category_repository.create(
@@ -51,6 +51,10 @@ class RegistrationService:
 
     def register_from_token(self, token: str) -> User:
         user_data = self._get_user_data(token)
+
+        if user_data is None:
+            return None
+
         user = self.register(**user_data)
         self._temporary_storage_service.delete(token)
 

@@ -12,7 +12,7 @@ class JWTUserEncodingService:
     def encode(self, phone_number: str, exp: int) -> str:
         payload = {
             "sub": phone_number,
-            "exp": datetime.datetime.now() + datetime.timedelta(seconds=exp),
+            "exp": datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(seconds=exp),
         }
 
         return jwt.encode(payload, JWT_SECRET, JWT_ALGORITHM)

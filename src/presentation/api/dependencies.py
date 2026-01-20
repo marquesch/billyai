@@ -22,7 +22,7 @@ from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import AIAgentService
 from domain.ports.services import AMQPService
-from domain.ports.services import AsyncTaskDispatcher
+from domain.ports.services import AsyncTaskDispatcherService
 from domain.ports.services import PubsubService
 from domain.ports.services import TemporaryStorageService
 from domain.ports.services import UserEncodingService
@@ -37,7 +37,7 @@ from infrastructure.persistence.database.repositories.tenant_repository import D
 from infrastructure.persistence.database.repositories.user_repository import DBUserRepository
 from infrastructure.services.aio_pika_amqp_service import AioPikaAMQPService
 from infrastructure.services.aio_pika_amqp_service import AioPikaPoolService
-from infrastructure.services.amqp_async_task_dispatcher import AMQPAsyncTaskDispatcher
+from infrastructure.services.amqp_async_task_dispatcher import AMQPAsyncTaskDispatcherService
 from infrastructure.services.amqp_whatsapp_broker_message_service import AMQPWhatsappBrokerMessageService
 from infrastructure.services.jwt_encoding_service import JWTUserEncodingService
 from infrastructure.services.pydanticai_agent_service import PydanticAIAgentService
@@ -183,9 +183,9 @@ async def get_pubsub_service() -> PubsubService:
         return RedisPubsubService(client=redis.asyncio.Redis(connection_pool=async_redis_pool))
 
 
-def get_async_task_dispatcher(amqp_service: Annotated[AMQPService, Depends(get_amqp_service)]) -> AsyncTaskDispatcher:
+def get_async_task_dispatcher_service(amqp_service: Annotated[AMQPService, Depends(get_amqp_service)]) -> AsyncTaskDispatcherService:
     if app_settings.environment != "testing":
-        return AMQPAsyncTaskDispatcher(amqp_service)
+        return AMQPAsyncTaskDispatcherService(amqp_service)
 
 
 def get_whatsapp_broker_message_service(
@@ -216,7 +216,7 @@ def get_ai_agent_service(
 
 
 def get_async_task_service(
-    async_task_dispatcher: Annotated[AsyncTaskDispatcher, Depends(get_async_task_dispatcher)],
+    async_task_dispatcher: Annotated[AsyncTaskDispatcherService, Depends(get_async_task_dispatcher_service)],
     message_repo: Annotated[MessageRepository, Depends(get_message_repository)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
     tenant_repo: Annotated[UserRepository, Depends(get_tenant_repository)],

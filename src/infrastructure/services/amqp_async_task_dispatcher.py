@@ -2,7 +2,7 @@ from domain.ports.services import AMQPService
 from infrastructure.config.settings import app_settings
 
 
-class AMQPAsyncTaskDispatcher:
+class AMQPAsyncTaskDispatcherService:
     def __init__(self, amqp_service: AMQPService):
         self.amqp_service = amqp_service
 

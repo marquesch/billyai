@@ -1,9 +1,5 @@
 import asyncio
 import datetime
-from collections.abc import Callable
-from typing import Any
-from typing import Generic
-from typing import TypeVar
 
 from domain.entities import MessageAuthor
 from domain.entities import MessageBroker
@@ -12,52 +8,17 @@ from domain.ports.repositories import MessageRepository
 from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import AIAgentService
-from domain.ports.services import AsyncTaskDispatcher
+from domain.ports.services import AsyncTaskDispatcherService
 from domain.ports.services import PubsubService
 from domain.ports.services import WhatsappBrokerMessageService
-
-T = TypeVar("T")
-
-
-class BoundTask(Generic[T]):
-    def __init__(self, instance: Any, func: Callable[..., T], name: str):
-        self._instance = instance
-        self._func = func
-        self._task_name = name
-
-    async def __call__(self, *args, **kwargs) -> T:
-        return await self._func(self._instance, *args, **kwargs)
-
-    async def delay(self, **kwargs) -> None:
-        await self._instance._async_task_dispatcher.dispatch(self._task_name, **kwargs)
-
-
-class Task:
-    def __init__(self, func: Callable):
-        self._func = func
-        self._name = func.__name__
-
-    def __set_name__(self, owner, name):
-        self._name = name
-
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        return BoundTask(instance, self._func, self._name)
-
-
-def task(func):
-    return Task(func)
 
 
 # TODO: Improve async_task_service to distribute between multiple use cases
 # each with their own dependencies.
-# Also, create a simple way to schedule tasks without needing to inject all the
-# dependencies needed to run said them.
 class AsyncTaskService:
     def __init__(
         self,
-        async_task_dispatcher: AsyncTaskDispatcher,
+        async_task_dispatcher: AsyncTaskDispatcherService,
         message_repo: MessageRepository,
         user_repo: UserRepository,
         tenant_repo: TenantRepository,
@@ -73,7 +34,6 @@ class AsyncTaskService:
         self._pubsub = pubsub_service
         self._whatsapp_broker_message_service = whatsapp_broker_message_service
 
-    @task
     async def process_incoming_message(
         self,
         message_body: str,
@@ -103,9 +63,8 @@ class AsyncTaskService:
             external_message_id=message_id,
         )
 
-        await self.process_message.delay(message_id=message.id)
+        await self._async_task_dispatcher.dispatch("process_message", message_id=message.id)
 
-    @task
     async def process_message(self, message_id: int):
         await asyncio.sleep(2)
         try:
@@ -113,14 +72,13 @@ class AsyncTaskService:
         except MessageNotFoundException:
             return
 
-        await self.notify_user.delay(message_id=message.id)
+        await self._async_task_dispatcher.dispatch("notify_user", message_id=message.id)
 
         if message.author == MessageAuthor.USER.value:
-            await self.run_agent.delay(message_id=message.id)
+            await self._async_task_dispatcher.dispatch("run_agent", message_id=message.id)
         elif message.broker == MessageBroker.WHATSAPP.value:
-            await self.send_message.delay(message_id=message.id)
+            await self._async_task_dispatcher.dispatch("send_message", messaeg_id=message.id)
 
-    @task
     async def notify_user(self, message_id: int):
         message = self._message_repo.get_by_id(message_id)
         message_data = {
@@ -132,7 +90,6 @@ class AsyncTaskService:
         }
         await self._pubsub.publish(channel=str(message.tenant_id), event="new-message", data=message_data)
 
-    @task
     async def run_agent(self, message_id: int):
         message = self._message_repo.get_by_id(message_id)
         user = self._user_repo.get_by_id(message.user_id)
@@ -148,9 +105,8 @@ class AsyncTaskService:
             tenant_id=user.tenant_id,
         )
 
-        await self.process_message.delay(message_id=reply_msg.id)
+        await self._async_task_dispatcher.dispatch("process_message", message_id=reply_msg.id)
 
-    @task
     async def send_message(self, message_id: int):
         message = self._message_repo.get_by_id(message_id=message_id)
         user = self._user_repo.get_by_id(message.user_id)

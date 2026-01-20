@@ -9,7 +9,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from pydantic import field_validator
 
-from application.services.async_task_service import AsyncTaskService
 from application.services.authentication_service import AuthenticationService
 from application.services.registration_service import RegistrationService
 from domain.entities import MessageAuthor
@@ -19,6 +18,7 @@ from domain.exceptions import PhoneNumberTakenException
 from domain.exceptions import RegistrationError
 from domain.exceptions import UserNotFoundException
 from domain.ports.repositories import MessageRepository
+from domain.ports.services import AsyncTaskDispatcherService
 from presentation.api import dependencies
 from presentation.api.dependencies import get_authentication_service
 from presentation.api.dependencies import get_registration_service
@@ -76,10 +76,10 @@ async def verify_registration(
 ):
     try:
         user = registration_service.register_from_token(token)
-    except RegistrationError as e:
-        raise HTTPException(422, detail="Invalid token") from e
     except PhoneNumberTakenException as e:
         raise HTTPException(409, detail="Phone number taken") from e
+    except RegistrationError as e:
+        raise HTTPException(422, detail="Invalid token") from e
 
     return user
 
@@ -92,7 +92,10 @@ async def login(
         Depends(get_authentication_service),
     ],
     message_repository: Annotated[MessageRepository, Depends(dependencies.get_message_repository)],
-    async_task_service: Annotated[AsyncTaskService, Depends(dependencies.get_async_task_service)],
+    async_task_dispatcher_service: Annotated[
+        AsyncTaskDispatcherService,
+        Depends(dependencies.get_async_task_dispatcher_service),
+    ],
 ):
     try:
         pin, user = authentication_service.initiate_authorization(req.phone_number)
@@ -110,7 +113,7 @@ async def login(
         tenant_id=user.tenant_id,
     )
 
-    await async_task_service.process_message.delay(message_id=message.id)
+    await async_task_dispatcher_service.dispatch("process_message", message_id=message.id)
 
     return JSONResponse({"message": "A PIN was sent to your phone"})
 

@@ -18,7 +18,7 @@ from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import AIAgentService
 from domain.ports.services import AMQPService
-from domain.ports.services import AsyncTaskDispatcher
+from domain.ports.services import AsyncTaskDispatcherService
 from domain.ports.services import PubsubService
 from domain.ports.services import TemporaryStorageService
 from domain.ports.services import WhatsappBrokerMessageService
@@ -31,7 +31,7 @@ from infrastructure.persistence.database.repositories.tenant_repository import D
 from infrastructure.persistence.database.repositories.user_repository import DBUserRepository
 from infrastructure.services.aio_pika_amqp_service import AioPikaAMQPService
 from infrastructure.services.aio_pika_amqp_service import AioPikaPoolService
-from infrastructure.services.amqp_async_task_dispatcher import AMQPAsyncTaskDispatcher
+from infrastructure.services.amqp_async_task_dispatcher import AMQPAsyncTaskDispatcherService
 from infrastructure.services.amqp_whatsapp_broker_message_service import AMQPWhatsappBrokerMessageService
 from infrastructure.services.pydanticai_agent_service import PydanticAIAgentService
 from infrastructure.services.redis_pubsub_service import RedisPubsubService
@@ -263,8 +263,8 @@ async def setup_global_registry() -> None:
     )
 
     global_registry.register(
-        AsyncTaskDispatcher,
-        factory=lambda amqp_service: AMQPAsyncTaskDispatcher(amqp_service=amqp_service),
+        AsyncTaskDispatcherService,
+        factory=lambda amqp_service: AMQPAsyncTaskDispatcherService(amqp_service=amqp_service),
         dependencies=[AMQPService],
     )
 
@@ -292,7 +292,7 @@ async def setup_global_registry() -> None:
             whatsapp_broker_message_service=whatsapp_broker_message_service,
         ),
         dependencies=[
-            AsyncTaskDispatcher,
+            AsyncTaskDispatcherService,
             MessageRepository,
             UserRepository,
             TenantRepository,

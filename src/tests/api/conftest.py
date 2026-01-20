@@ -16,41 +16,18 @@ def client():
     return TestClient(app)
 
 
-@pytest.fixture
-def in_memory_user_repository(in_memory_user_repository: InMemoryUserRepository) -> InMemoryUserRepository:
-    app.dependency_overrides[dependencies.get_user_repository] = lambda: in_memory_user_repository
-    return in_memory_user_repository
-
-
-@pytest.fixture
-def in_memory_bill_repository(in_memory_bill_repository: InMemoryBillRepository) -> InMemoryBillRepository:
-    app.dependency_overrides[dependencies.get_bill_repository] = lambda: in_memory_bill_repository
-    return in_memory_bill_repository
-
-
-@pytest.fixture
-def in_memory_category_repository(
+@pytest.fixture(autouse=True)
+def repositories_override(
+    in_memory_user_repository: InMemoryUserRepository,
+    in_memory_bill_repository: InMemoryBillRepository,
     in_memory_category_repository: InMemoryCategoryRepository,
-) -> InMemoryCategoryRepository:
-    app.dependency_overrides[dependencies.get_category_repository] = lambda: in_memory_category_repository
-    return in_memory_category_repository
-
-
-@pytest.fixture
-def in_memory_message_repository(in_memory_message_repository: InMemoryMessageRepository) -> InMemoryMessageRepository:
-    app.dependency_overrides[dependencies.get_message_repository] = lambda: in_memory_message_repository
-    return in_memory_message_repository
-
-
-@pytest.fixture
-def in_memory_tenant_repository(in_memory_tenant_repository: InMemoryTenantRepository) -> InMemoryTenantRepository:
-    app.dependency_overrides[dependencies.get_tenant_repository] = lambda: in_memory_tenant_repository
-    return in_memory_tenant_repository
-
-
-@pytest.fixture
-def in_memory_temporary_storage_service(
+    in_memory_message_repository: InMemoryMessageRepository,
+    in_memory_tenant_repository: InMemoryTenantRepository,
     in_memory_temporary_storage_service: InMemoryTemporaryStorageService,
-) -> InMemoryTemporaryStorageService:
+):
+    app.dependency_overrides[dependencies.get_user_repository] = lambda: in_memory_user_repository
+    app.dependency_overrides[dependencies.get_bill_repository] = lambda: in_memory_bill_repository
+    app.dependency_overrides[dependencies.get_category_repository] = lambda: in_memory_category_repository
+    app.dependency_overrides[dependencies.get_message_repository] = lambda: in_memory_message_repository
+    app.dependency_overrides[dependencies.get_tenant_repository] = lambda: in_memory_tenant_repository
     app.dependency_overrides[dependencies.get_temporary_storage_service] = lambda: in_memory_temporary_storage_service
-    return in_memory_temporary_storage_service

@@ -16,22 +16,17 @@ def tenant(in_memory_tenant_repository: InMemoryTenantRepository) -> Tenant:
 
 
 @pytest.fixture
-def unregistered_user(in_memory_user_repository: InMemoryUserRepository, tenant: Tenant):
-    return in_memory_user_repository.create(
-        phone_number="41999999999",
-        name="Test User",
-        tenant_id=tenant.id,
-        is_registered=False,
-    )
+def unregistered_user(
+    in_memory_temporary_storage_service: InMemoryTemporaryStorageService,
+):
+    in_memory_temporary_storage_service.set("token", {"phone_number": "41999999999", "name": "Test User"})
 
 
 @pytest.fixture
 def registered_user(
     in_memory_user_repository: InMemoryUserRepository,
     tenant: Tenant,
-    in_memory_temporary_storage_service: InMemoryTemporaryStorageService,
 ):
-    in_memory_temporary_storage_service.set("token", {"phone_number": "41999999999", "name": "Test User"})
     return in_memory_user_repository.create(
         phone_number="41999999999",
         name="Test User",
@@ -75,7 +70,6 @@ def test_verify_registration(
 ):
     response = client.post("/api/v1/auth/register/verify?token=token")
 
-    assert response.json() == {}
     assert response.status_code == 200
     assert response.json() == {
         "id": 1,
@@ -84,3 +78,22 @@ def test_verify_registration(
         "tenant_id": 1,
         "is_registered": True,
     }
+
+
+def test_verify_registration_with_created_user(
+    client: TestClient,
+    registered_user: User,
+    unregistered_user: User,
+    in_memory_temporary_storage_service: InMemoryTemporaryStorageService,
+):
+    response = client.post("/api/v1/auth/register/verify?token=token")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Phone number taken"
+
+
+def test_verify_registration_with_invalid_token(client: TestClient):
+    response = client.post("/api/v1/auth/register/verify?token=token")
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Invalid token"
