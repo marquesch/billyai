@@ -23,12 +23,20 @@ class InMemoryCategoryRepository(InMemoryRepository):
         return category
 
     def get_all(self, tenant_id: int) -> Generator[Category]:
-        return filter(lambda category: category.tenant_id == tenant_id, self._in_memory_database.categories.values())
+        return (
+            category
+            for category in filter(
+                lambda category: category.tenant_id == tenant_id,
+                self._in_memory_database.categories.values(),
+            )
+        )
 
     def get_by_name(self, tenant_id: int, category_name: str) -> Category:
-        categories = filter(
-            lambda category: category.tenant_id == tenant_id and category.name == category_name,
-            self._in_memory_database.categories.values(),
+        categories = list(
+            filter(
+                lambda category: category.tenant_id == tenant_id and category.name == category_name,
+                self._in_memory_database.categories.values(),
+            ),
         )
 
         if categories and len(categories) == 1:

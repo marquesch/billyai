@@ -1,11 +1,12 @@
 from domain.entities import User
+from domain.exceptions import PhoneNumberTakenException
 from domain.exceptions import UserNotFoundException
 from infrastructure.persistence.memory.repositories import InMemoryRepository
 
 
 class InMemoryUserRepository(InMemoryRepository):
     def get_by_phone_number(self, phone_number: str) -> User | None:
-        users = filter(lambda user: user.phone_number == phone_number, self._in_memory_database.users.items())
+        users = list(filter(lambda user: user.phone_number == phone_number, self._in_memory_database.users.values()))
 
         return users[0] if users else None
 
@@ -17,7 +18,7 @@ class InMemoryUserRepository(InMemoryRepository):
 
     def create(self, phone_number: str, name: str, tenant_id: int, is_registered: bool) -> User:
         if self.get_by_phone_number(phone_number=phone_number) is not None:
-            raise PhoneNumberTaken
+            raise PhoneNumberTakenException
 
         self._in_memory_database.users_id_seq += 1
         user = User(

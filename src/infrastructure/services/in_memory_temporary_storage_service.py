@@ -1,7 +1,8 @@
-from typing import Any
-from domain.exceptions import KeyNotFoundException
 import json
 import time
+from typing import Any
+
+from domain.exceptions import KeyNotFoundException
 
 
 class InMemoryTemporaryStorageService:
@@ -15,15 +16,14 @@ class InMemoryTemporaryStorageService:
         return True
 
     def get(self, key: str) -> Any:
-        json_data = self._database.get(key)
-        if json_data is None:
+        data = self._database.get(key)
+        if data is None:
             raise KeyNotFoundException
 
-        db_data = json.loads(json_data)
-        if db_data["ex"] < time.time():
+        if data["ex"] < time.time():
             raise KeyNotFoundException
 
-        return db_data["data"]
+        return json.loads(data["data"])
 
     def delete(self, key: str) -> bool:
         db_data = self._database.pop(key, None)

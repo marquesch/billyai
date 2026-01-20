@@ -8,3 +8,5 @@ class InMemoryTenantRepository(InMemoryRepository):
         tenant = Tenant(id=self._in_memory_database.tenants_id_seq)
 
         self._in_memory_database.tenants[self._in_memory_database.tenants_id_seq] = tenant
+
+        return tenant
