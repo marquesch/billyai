@@ -34,6 +34,10 @@ class InMemoryMessageRepository(InMemoryRepository):
             external_message_id=external_message_id,
         )
 
+        self._in_memory_database.messages[self._in_memory_database.messages_id_seq] = message
+
+        return message
+
     def get_all(self, user_id: int, tenant_id: int) -> Generator[Message]:
         return (
             message
