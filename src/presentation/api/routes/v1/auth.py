@@ -29,10 +29,26 @@ router = APIRouter(prefix="/auth")
 class PhoneNumberRequestMixin:
     phone_number: str
 
+    # TODO: Improve this validation to include international numbers
+    # and other types of brazillian numbers, like landlines
+    # https://pypi.org/project/phonenumbers/
     @field_validator("phone_number")
     @classmethod
     def format_phone_number(cls, v: str) -> str:
-        return re.sub(r"\D", "", v)
+        digits = re.sub(r"\D", "", v)
+
+        if len(digits) > 13 or len(digits) < 10:
+            raise ValueError("Invalid phone number format")
+
+        ddi = "55"
+        if len(digits) > 11:
+            ddi = digits[0:2]
+            digits = digits[2:]
+
+        if len(digits) < 11:
+            digits = f"{digits[0:2]}9{digits[2:]}"
+
+        return f"{ddi}{digits}"
 
 
 class RegisterRequest(BaseModel, PhoneNumberRequestMixin):

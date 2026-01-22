@@ -53,7 +53,7 @@ def tenant(in_memory_tenant_repository: InMemoryTenantRepository) -> Tenant:
 def unregistered_user(
     in_memory_temporary_storage_service: InMemoryTemporaryStorageService,
 ):
-    in_memory_temporary_storage_service.set("token", {"phone_number": "41999999999", "name": "Test User"})
+    in_memory_temporary_storage_service.set("token", {"phone_number": "5541999999999", "name": "Test User"})
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def registered_user(
     tenant: Tenant,
 ):
     return in_memory_user_repository.create(
-        phone_number="41999999999",
+        phone_number="5541999999999",
         name="Test User",
         tenant_id=tenant.id,
         is_registered=True,

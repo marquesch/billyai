@@ -9,8 +9,20 @@ from infrastructure.persistence.memory.repositories.message_repository import In
 from infrastructure.persistence.memory.repositories.user_repository import InMemoryUserRepository
 from infrastructure.services.in_memory_temporary_storage_service import InMemoryTemporaryStorageService
 
+def test_register_user_10_digits(
+    client: TestClient,
+    in_memory_temporary_storage_service: InMemoryTemporaryStorageService,
+    in_memory_user_repository: InMemoryUserRepository,
+):
+    with mock.patch("application.services.registration_service.secrets.token_urlsafe") as token_mock:
+        token_mock.return_value = "token"
+        response = client.post("/api/v1/auth/register", json={"phone_number": "4199999999", "name": "Test User"})
 
-def test_register_user(
+    assert response.status_code == 200
+    assert response.json()["detail"] == "A confirmation link was sent to your phone"
+    assert in_memory_temporary_storage_service.get("token") == {"phone_number": "5541999999999", "name": "Test User"}
+
+def test_register_user_11_digits(
     client: TestClient,
     in_memory_temporary_storage_service: InMemoryTemporaryStorageService,
     in_memory_user_repository: InMemoryUserRepository,
@@ -21,8 +33,33 @@ def test_register_user(
 
     assert response.status_code == 200
     assert response.json()["detail"] == "A confirmation link was sent to your phone"
-    assert in_memory_temporary_storage_service.get("token") == {"phone_number": "41999999999", "name": "Test User"}
+    assert in_memory_temporary_storage_service.get("token") == {"phone_number": "5541999999999", "name": "Test User"}
 
+def test_register_user_12_digits(
+    client: TestClient,
+    in_memory_temporary_storage_service: InMemoryTemporaryStorageService,
+    in_memory_user_repository: InMemoryUserRepository,
+):
+    with mock.patch("application.services.registration_service.secrets.token_urlsafe") as token_mock:
+        token_mock.return_value = "token"
+        response = client.post("/api/v1/auth/register", json={"phone_number": "554199999999", "name": "Test User"})
+
+    assert response.status_code == 200
+    assert response.json()["detail"] == "A confirmation link was sent to your phone"
+    assert in_memory_temporary_storage_service.get("token") == {"phone_number": "5541999999999", "name": "Test User"}
+
+def test_register_user_13_digits(
+    client: TestClient,
+    in_memory_temporary_storage_service: InMemoryTemporaryStorageService,
+    in_memory_user_repository: InMemoryUserRepository,
+):
+    with mock.patch("application.services.registration_service.secrets.token_urlsafe") as token_mock:
+        token_mock.return_value = "token"
+        response = client.post("/api/v1/auth/register", json={"phone_number": "5541999999999", "name": "Test User"})
+
+    assert response.status_code == 200
+    assert response.json()["detail"] == "A confirmation link was sent to your phone"
+    assert in_memory_temporary_storage_service.get("token") == {"phone_number": "5541999999999", "name": "Test User"}
 
 def test_register_user_phone_taken(registered_user: User, client: TestClient):
     response = client.post("/api/v1/auth/register", json={"phone_number": "41999999999", "name": "Test User"})
@@ -35,7 +72,7 @@ def test_register_user_invalid_phone(client: TestClient):
     response = client.post("/api/v1/auth/register", json={"phone_number": "123", "name": "Test User"})
 
     assert response.status_code == 422
-    assert response.json()["detail"] == "Invalid phone number format"
+    assert "Invalid phone number format" in response.json()['detail'][0]["msg"]
 
 
 def test_verify_registration(
@@ -48,7 +85,7 @@ def test_verify_registration(
     assert response.json() == {
         "id": 1,
         "name": "Test User",
-        "phone_number": "41999999999",
+        "phone_number": "5541999999999",
         "tenant_id": 1,
         "is_registered": True,
     }
@@ -97,11 +134,11 @@ def test_login_non_existent_phone_number(client: TestClient):
     assert response.json()["detail"] == "User not found"
 
 
-def test_invalid_phone_number_format(client: TestClient):
-    response = client.post("/api/v1/auth/login", json={"phone_number": "41999999999"})
+def test_login_invalid_phone_number_format(client: TestClient):
+    response = client.post("/api/v1/auth/login", json={"phone_number": "123"})
 
     assert response.status_code == 422
-    assert response.json()["detail"] == "Invalid phone number format"
+    assert "Invalid phone number format" in response.json()['detail'][0]["msg"]
 
 
 def test_verify_login(client: TestClient, user_login_initiated: User):
