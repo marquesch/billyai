@@ -46,7 +46,7 @@ def repositories_override(
 
 
 @pytest.fixture
-def mock_async_task_dispatcher_service(mocker):
+def mock_async_task_dispatcher_service(mocker) -> mock.AsyncMock():
     async_task_dispatcher_service_mock = mocker.AsyncMock()
     app.dependency_overrides[dependencies.get_async_task_dispatcher_service] = (
         lambda: async_task_dispatcher_service_mock

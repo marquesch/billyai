@@ -4,6 +4,9 @@ import pytest
 
 from domain.entities import Bill
 from domain.entities import Category
+from domain.entities import Message
+from domain.entities import MessageAuthor
+from domain.entities import MessageBroker
 from domain.entities import Tenant
 from domain.entities import User
 from domain.ports.services import AMQPService
@@ -154,5 +157,49 @@ def bills(
             category_id=another_category.id,
             date=datetime.datetime.strptime("2024-12-13", "%Y-%m-%d").date(),
             value=199.90,
+        ),
+    ]
+
+
+@pytest.fixture
+def messages(
+    in_memory_message_repository: InMemoryMessageRepository,
+    tenant: Tenant,
+    registered_user: User,
+) -> list[Message]:
+    return [
+        in_memory_message_repository.create(
+            body="User message",
+            author=MessageAuthor.USER,
+            timestamp=datetime.datetime.fromisoformat("2025-01-01T13:00:00Z"),
+            broker=MessageBroker.API,
+            user_id=registered_user.id,
+            tenant_id=tenant.id,
+        ),
+        in_memory_message_repository.create(
+            body="Billy message",
+            author=MessageAuthor.BILLY,
+            timestamp=datetime.datetime.fromisoformat("2025-01-01T13:01:00Z"),
+            broker=MessageBroker.API,
+            user_id=registered_user.id,
+            tenant_id=tenant.id,
+        ),
+        in_memory_message_repository.create(
+            body="User whatsapp message",
+            author=MessageAuthor.USER,
+            timestamp=datetime.datetime.fromisoformat("2025-01-01T13:02:00Z"),
+            broker=MessageBroker.WHATSAPP,
+            external_message_id="userwppmsgid",
+            user_id=registered_user.id,
+            tenant_id=tenant.id,
+        ),
+        in_memory_message_repository.create(
+            body="Billy whatsapp message",
+            author=MessageAuthor.BILLY,
+            timestamp=datetime.datetime.fromisoformat("2025-01-01T13:03:00Z"),
+            broker=MessageBroker.WHATSAPP,
+            external_message_id="billywppmsgid",
+            user_id=registered_user.id,
+            tenant_id=tenant.id,
         ),
     ]
