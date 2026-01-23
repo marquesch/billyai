@@ -1,5 +1,12 @@
+import datetime
+
 import pytest
 
+from domain.entities import Bill
+from domain.entities import Category
+from domain.entities import Tenant
+from domain.entities import User
+from domain.ports.services import AMQPService
 from infrastructure.persistence.memory.repositories import InMemoryDatabase
 from infrastructure.persistence.memory.repositories.bill_repository import InMemoryBillRepository
 from infrastructure.persistence.memory.repositories.category_repository import InMemoryCategoryRepository
@@ -42,3 +49,110 @@ def in_memory_tenant_repository(in_memory_database: InMemoryDatabase) -> InMemor
 @pytest.fixture
 def in_memory_temporary_storage_service() -> InMemoryTemporaryStorageService:
     return InMemoryTemporaryStorageService()
+
+
+@pytest.fixture
+def mock_amqp_service(mocker) -> AMQPService:
+    return mocker.AsyncMock()
+
+
+@pytest.fixture
+def tenant(in_memory_tenant_repository: InMemoryTenantRepository) -> Tenant:
+    return in_memory_tenant_repository.create()
+
+
+@pytest.fixture
+def default_category(in_memory_category_repository: InMemoryCategoryRepository, tenant: Tenant) -> Category:
+    return in_memory_category_repository.create(
+        tenant_id=tenant.id,
+        name="Default Category",
+        description="Default Category description",
+    )
+
+
+@pytest.fixture
+def another_category(in_memory_category_repository: InMemoryCategoryRepository, tenant: Tenant) -> Category:
+    return in_memory_category_repository.create(
+        tenant_id=tenant.id,
+        name="Another Category",
+        description="Another Category description",
+    )
+
+
+@pytest.fixture
+def registered_user(
+    in_memory_user_repository: InMemoryUserRepository,
+    tenant: Tenant,
+) -> User:
+    return in_memory_user_repository.create(
+        phone_number="5541999999999",
+        name="Test User",
+        tenant_id=tenant.id,
+        is_registered=True,
+    )
+
+
+@pytest.fixture
+def registered_user_same_tenant(
+    in_memory_user_repository: InMemoryUserRepository,
+    tenant: Tenant,
+) -> User:
+    return in_memory_user_repository.create(
+        phone_number="5541999999997",
+        name="User Same Tenant",
+        tenant_id=tenant.id,
+        is_registered=True,
+    )
+
+
+@pytest.fixture
+def another_tenant(in_memory_tenant_repository: InMemoryTenantRepository) -> Tenant:
+    return in_memory_tenant_repository.create()
+
+
+@pytest.fixture
+def user_from_another_tenant(in_memory_user_repository: InMemoryUserRepository, another_tenant: Tenant) -> User:
+    return in_memory_user_repository.create(
+        phone_number="5541999999998",
+        name="User From Another Tenant",
+        tenant_id=another_tenant.id,
+        is_registered=True,
+    )
+
+
+@pytest.fixture
+def category_from_another_tenant(in_memory_category_repository: InMemoryCategoryRepository, another_tenant: Tenant):
+    return in_memory_category_repository.create(
+        tenant_id=another_tenant.id,
+        name="Category From Another Tenant",
+        description="Category From Another Tenant Description",
+    )
+
+
+@pytest.fixture
+def bills(
+    in_memory_bill_repository: InMemoryBillRepository,
+    default_category: Category,
+    another_category: Category,
+    tenant: Tenant,
+) -> list[Bill]:
+    return [
+        in_memory_bill_repository.create(
+            tenant_id=tenant.id,
+            category_id=default_category.id,
+            date=datetime.datetime.strptime("2012-12-12", "%Y-%m-%d").date(),
+            value=10.5,
+        ),
+        in_memory_bill_repository.create(
+            tenant_id=tenant.id,
+            category_id=default_category.id,
+            date=datetime.datetime.strptime("2024-12-12", "%Y-%m-%d").date(),
+            value=99.90,
+        ),
+        in_memory_bill_repository.create(
+            tenant_id=tenant.id,
+            category_id=another_category.id,
+            date=datetime.datetime.strptime("2024-12-13", "%Y-%m-%d").date(),
+            value=199.90,
+        ),
+    ]

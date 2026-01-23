@@ -13,13 +13,20 @@ class InMemoryBillRepository(InMemoryRepository):
         if tenant_id not in self._in_memory_database.tenants:
             raise TenantNotFoundException
 
-        if category_id not in self._in_memory_database.categories:
+        category = self._in_memory_database.categories.get(category_id)
+        if category is None or category.tenant_id != tenant_id:
             raise CategoryNotFoundException
 
-        self._bills_id_seq += 1
-        bill = Bill(id=self._bills_id_seq, value=value, date=date, category_id=category_id, tenant_id=tenant_id)
+        self._in_memory_database.bills_id_seq += 1
+        bill = Bill(
+            id=self._in_memory_database.bills_id_seq,
+            value=value,
+            date=date,
+            category_id=category_id,
+            tenant_id=tenant_id,
+        )
 
-        self._bills[self._bills_id_seq] = bill
+        self._in_memory_database.bills[self._in_memory_database.bills_id_seq] = bill
 
         return bill
 
@@ -34,13 +41,13 @@ class InMemoryBillRepository(InMemoryRepository):
             if bill.tenant_id != tenant_id:
                 return False
 
-            if date_range is not None and not date_range[0] <= bill.date <= date_range[1]:
+            if date_range is not None and (bill.date < date_range[0] or bill.date > date_range[1]):
                 return False
 
             if category_id is not None and bill.category_id != category_id:
                 return False
 
-            if value_range is not None and not value_range[0] <= bill.value <= value_range[1]:
+            if value_range is not None and (bill.value < value_range[0] or bill.value > value_range[1]):
                 return False
 
             return True
@@ -72,7 +79,7 @@ class InMemoryBillRepository(InMemoryRepository):
 
         if category_id is not None:
             category = self._in_memory_database.categories.get(category_id)
-            if category is None:
+            if category is None or category.tenant_id != tenant_id:
                 raise CategoryNotFoundException
             bill.category_id = category_id
 

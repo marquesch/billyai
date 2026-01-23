@@ -236,11 +236,11 @@ async def setup_global_registry() -> None:
     )
 
     def get_broker_url():
-        if app_settings.environment != "test":
+        if app_settings.environment != "testing":
             return app_settings.rabbitmq_url
 
     def get_aio_pika_pool_service():
-        if app_settings.environment != "test":
+        if app_settings.environment != "testing":
             return AioPikaPoolService(get_broker_url())
 
     global_registry.register(
