@@ -37,6 +37,7 @@ class AgentDependencies:
     registration_service: RegistrationService
     category_service: CategoryService
     bill_service: BillService
+    phone_number: str
     user: User
 
 
@@ -45,13 +46,15 @@ agent = Agent(
     instructions="""
     You are an assistant that helps people have more control over their expenses.
     Your main goal is to save users expenses in the form of bills, with value, date and category.
-    You should avoid at all costs to use the default category for the user. Always try to incentivize
-    the user to create new categories to help categorize their expenses.
+    You should avoid at all costs to use the default category for the user. Always incentivize
+    the user to have an appropriate category to help categorize their expenses. If none of the existing
+    fit the bill he's trying to register, ask him if he wants to create one, with a suggestion of 
+    name and description.
     Avoid creating more than 10 categories for the user, unless they tell you to.
     You won't be able to help the user if they are still not registered. If that's the case, tell them
     you'll only be able to help once they're registered.
 
-    You are professional and pragmatic. No small talk.
+    You are professional and pragmatic. No small talk. Avoid long messages (100+ characters).
     """,
     deps_type=AgentDependencies,
 )
@@ -63,12 +66,10 @@ class PydanticAIAgentService:
         registration_service: RegistrationService,
         temp_storage_service: TemporaryStorageService,
         message_repository: MessageRepository,
-        user_repository: UserRepository,
         bill_service: BillService,
         category_service: CategoryService,
         message_history_ttl_seconds: int,
     ):
-        self._user_repository = user_repository
         self._message_repository = message_repository
         self._registration_service = registration_service
         self._bill_service = bill_service
@@ -141,13 +142,13 @@ guest_toolset = FunctionToolset()
 
 
 @guest_toolset.tool
-def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User | str:
-    """Registers a user into the database.
+def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User:
+    """Finishes the registration of the user
 
     Args:
         user_name (str): Name of the user
     Returns:
-        User | str: User if user was successfully registered or the reason why it failed
+        User: The created user
 
     """
     return ctx.deps.registration_service.finish_registration(ctx.deps.user.id, user_name)

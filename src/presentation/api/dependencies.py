@@ -183,7 +183,9 @@ async def get_pubsub_service() -> PubsubService:
         return RedisPubsubService(client=redis.asyncio.Redis(connection_pool=async_redis_pool))
 
 
-def get_async_task_dispatcher_service(amqp_service: Annotated[AMQPService, Depends(get_amqp_service)]) -> AsyncTaskDispatcherService:
+def get_async_task_dispatcher_service(
+    amqp_service: Annotated[AMQPService, Depends(get_amqp_service)],
+) -> AsyncTaskDispatcherService:
     if app_settings.environment != "testing":
         return AMQPAsyncTaskDispatcherService(amqp_service)
 
@@ -199,7 +201,6 @@ def get_ai_agent_service(
     registration_service: Annotated[RegistrationService, Depends(get_registration_service)],
     temp_storage_service: Annotated[TemporaryStorageService, Depends(get_temporary_storage_service)],
     message_repo: Annotated[MessageRepository, Depends(get_message_repository)],
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
     bill_service: Annotated[BillService, Depends(get_bill_service)],
     category_service: Annotated[CategoryService, Depends(get_category_service)],
 ) -> AIAgentService:
@@ -208,7 +209,6 @@ def get_ai_agent_service(
             registration_service=registration_service,
             temp_storage_service=temp_storage_service,
             message_repository=message_repo,
-            user_repository=user_repo,
             bill_service=bill_service,
             category_service=category_service,
             message_history_ttl_seconds=3600,
