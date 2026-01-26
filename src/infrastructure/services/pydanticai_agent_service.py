@@ -26,7 +26,6 @@ from domain.exceptions import CategoryAlreadyExistsException
 from domain.exceptions import CategoryNotFoundException
 from domain.exceptions import KeyNotFoundException
 from domain.ports.repositories import MessageRepository
-from domain.ports.repositories import UserRepository
 from domain.ports.services import TemporaryStorageService
 
 USER_MESSAGE_HISTORY_KEY_TEMPLATE = Template("user:$user_id:message_history")
@@ -37,7 +36,6 @@ class AgentDependencies:
     registration_service: RegistrationService
     category_service: CategoryService
     bill_service: BillService
-    phone_number: str
     user: User
 
 

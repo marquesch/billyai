@@ -2,7 +2,7 @@ import asyncio
 import logging
 import traceback
 
-from application.services.async_task_service import AsyncTaskService
+from application.use_cases import async_tasks
 from domain.ports.services import AMQPService
 from infrastructure.config.settings import app_settings
 from infrastructure.di import global_registry
@@ -21,15 +21,15 @@ async def worker_callback(payload: dict):
 
     async with global_registry.scope():
         try:
-            async_task_service = await resolve(AsyncTaskService)
+            if not hasattr(async_tasks, task_name):
+                logger.error(f"Task '{task_name}' not found in async_tasks module")
 
-            if not hasattr(async_task_service, task_name):
-                logger.error(f"Task '{task_name}' not found in AsyncTaskService")
-                return
+            task_cls = getattr(async_tasks, task_name)
+            task_build_args = [await resolve(dep) for dep in task_cls.dependencies]
 
-            task_method = getattr(async_task_service, task_name)
+            task = task_cls(*task_build_args)
 
-            await task_method(**task_kwargs)
+            await task(**task_kwargs)
             logger.info(f"Finished task: {task_name}")
 
         except Exception as e:

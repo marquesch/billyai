@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 
+from application.use_cases import AsyncTask
 from domain.entities import MessageAuthor
 from domain.entities import MessageBroker
 from domain.exceptions import MessageNotFoundException
@@ -13,12 +14,9 @@ from domain.ports.services import PubsubService
 from domain.ports.services import WhatsappBrokerMessageService
 
 
-# use this task to dispatch calls
-class AsyncTask:
-    pass
+class ProcessIncomingMessage(AsyncTask):
+    dependencies = [AsyncTaskDispatcherService, MessageRepository, UserRepository, TenantRepository]
 
-
-class ProcessIncomingMessageUseCase(AsyncTask):
     def __init__(
         self,
         async_task_dispatcher: AsyncTaskDispatcherService,
@@ -57,10 +55,12 @@ class ProcessIncomingMessageUseCase(AsyncTask):
             tenant_id=user.tenant_id,
             external_message_id=message_id,
         )
-        await self._async_task_dispatcher.dispatch("process_message", message_id=message.id)
+        await ProcessMessage.dispatch(self._async_task_dispatcher, message_id=message.id)
 
 
-class ProcessMessageUseCase(AsyncTask):
+class ProcessMessage(AsyncTask):
+    dependencies = [AsyncTaskDispatcherService, MessageRepository]
+
     def __init__(
         self,
         async_task_dispatcher: AsyncTaskDispatcherService,
@@ -75,14 +75,16 @@ class ProcessMessageUseCase(AsyncTask):
             message = self._message_repository.get_by_id(message_id)
         except MessageNotFoundException:
             return
-        await self._async_task_dispatcher.dispatch("notify_user", message_id=message.id)
+        await NotifyUser.dispatch(self._async_task_dispatcher, message_id=message.id)
         if message.author == MessageAuthor.USER.value:
-            await self._async_task_dispatcher.dispatch("run_agent", message_id=message.id)
+            await RunAgent.dispatch(self._async_task_dispatcher, message_id=message.id)
         elif message.broker == MessageBroker.WHATSAPP.value:
-            await self._async_task_dispatcher.dispatch("send_message", messaeg_id=message.id)
+            await SendMessage.dispatch(self._async_task_dispatcher, message_id=message.id)
 
 
-class NotifyUserUseCase(AsyncTask):
+class NotifyUser(AsyncTask):
+    dependencies = [MessageRepository, PubsubService]
+
     def __init__(
         self,
         message_repository: MessageRepository,
@@ -103,7 +105,9 @@ class NotifyUserUseCase(AsyncTask):
         await self._pubsub_service.publish(channel=str(message.tenant_id), event="new-message", data=message_data)
 
 
-class RunAgentUseCase(AsyncTask):
+class RunAgent(AsyncTask):
+    dependencies = AsyncTaskDispatcherService, MessageRepository, UserRepository, AIAgentService
+
     def __init__(
         self,
         async_task_dispatcher: AsyncTaskDispatcherService,
@@ -128,10 +132,12 @@ class RunAgentUseCase(AsyncTask):
             user_id=user.id,
             tenant_id=user.tenant_id,
         )
-        await self._async_task_dispatcher.dispatch("process_message", message_id=reply_msg.id)
+        await ProcessMessage.dispatch(self._async_task_dispatcher, message_id=reply_msg.id)
 
 
-class SendMessageUseCase(AsyncTask):
+class SendMessage(AsyncTask):
+    dependencies = [MessageRepository, UserRepository, WhatsappBrokerMessageService]
+
     def __init__(
         self,
         message_repository: MessageRepository,

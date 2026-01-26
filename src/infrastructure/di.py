@@ -7,7 +7,6 @@ from typing import TypeVar
 
 import redis
 
-from application.services.async_task_service import AsyncTaskService
 from application.services.bill_service import BillService
 from application.services.category_service import CategoryService
 from application.services.registration_service import RegistrationService
@@ -214,13 +213,11 @@ async def setup_global_registry() -> None:
         factory=lambda registration_service,
         temp_storage_service,
         message_repository,
-        user_repository,
         bill_service,
         category_service: PydanticAIAgentService(
             registration_service,
             temp_storage_service,
             message_repository,
-            user_repository,
             bill_service,
             category_service,
             3600,
@@ -229,7 +226,6 @@ async def setup_global_registry() -> None:
             RegistrationService,
             TemporaryStorageService,
             MessageRepository,
-            UserRepository,
             BillService,
             CategoryService,
         ],
@@ -272,32 +268,4 @@ async def setup_global_registry() -> None:
         WhatsappBrokerMessageService,
         factory=lambda amqp_service: AMQPWhatsappBrokerMessageService(amqp_service=amqp_service),
         dependencies=[AMQPService],
-    )
-
-    global_registry.register(
-        AsyncTaskService,
-        factory=lambda async_task_dispatcher,
-        message_repo,
-        user_repo,
-        tenant_repo,
-        ai_agent_service,
-        pubsub_service,
-        whatsapp_broker_message_service: AsyncTaskService(
-            async_task_dispatcher=async_task_dispatcher,
-            message_repo=message_repo,
-            user_repo=user_repo,
-            tenant_repo=tenant_repo,
-            ai_agent_service=ai_agent_service,
-            pubsub_service=pubsub_service,
-            whatsapp_broker_message_service=whatsapp_broker_message_service,
-        ),
-        dependencies=[
-            AsyncTaskDispatcherService,
-            MessageRepository,
-            UserRepository,
-            TenantRepository,
-            AIAgentService,
-            PubsubService,
-            WhatsappBrokerMessageService,
-        ],
     )

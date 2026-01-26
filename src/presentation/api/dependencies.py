@@ -9,7 +9,6 @@ from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 
-from application.services.async_task_service import AsyncTaskService
 from application.services.authentication_service import AuthenticationService
 from application.services.bill_service import BillService
 from application.services.category_service import CategoryService
@@ -212,28 +211,4 @@ def get_ai_agent_service(
             bill_service=bill_service,
             category_service=category_service,
             message_history_ttl_seconds=3600,
-        )
-
-
-def get_async_task_service(
-    async_task_dispatcher: Annotated[AsyncTaskDispatcherService, Depends(get_async_task_dispatcher_service)],
-    message_repo: Annotated[MessageRepository, Depends(get_message_repository)],
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
-    tenant_repo: Annotated[UserRepository, Depends(get_tenant_repository)],
-    ai_agent_service: Annotated[AIAgentService, Depends(get_ai_agent_service)],
-    pubsub_service: Annotated[PubsubService, Depends(get_pubsub_service)],
-    whatasapp_broker_message_service: Annotated[
-        WhatsappBrokerMessageService,
-        Depends(get_whatsapp_broker_message_service),
-    ],
-) -> AsyncTaskService:
-    if app_settings.environment != "testing":
-        return AsyncTaskService(
-            async_task_dispatcher=async_task_dispatcher,
-            message_repo=message_repo,
-            user_repo=user_repo,
-            tenant_repo=tenant_repo,
-            ai_agent_service=ai_agent_service,
-            pubsub_service=pubsub_service,
-            whatsapp_broker_message_service=whatasapp_broker_message_service,
         )
