@@ -20,13 +20,13 @@ class DBBillRepository(DBRepository):
 
         return db_bill
 
-    def create(self, tenant_id: int, date: datetime.date, value: float, category_id: int | None = None) -> Bill:
+    def create(self, tenant_id: int, date: datetime.date, value: float, category_id: int) -> Bill:
         db_tenant = self.session.query(DBTenant).get(tenant_id)
 
         if db_tenant is None:
             raise TenantNotFoundException
 
-        db_category = self.session.query(DBCategory).filter_by(category_id=category_id, tenant_id=tenant_id).first()
+        db_category = self.session.query(DBCategory).filter_by(id=category_id, tenant_id=tenant_id).first()
 
         if db_category is None:
             raise CategoryNotFoundException
