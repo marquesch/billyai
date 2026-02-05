@@ -117,9 +117,9 @@ class DBMessage(Base, TenantMixin):
         return Message(
             id=self.id,
             body=self.body,
-            author=self.author.value,
+            author=self.author,
             timestamp=self.timestamp,
-            broker=self.broker.value,
+            broker=self.broker,
             external_message_id=self.external_message_id,
             user_id=self.user_id,
             tenant_id=self.tenant_id,

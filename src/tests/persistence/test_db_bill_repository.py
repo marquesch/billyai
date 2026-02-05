@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from domain.entities import Bill
 from domain.exceptions import BillNotFoundException
 from domain.exceptions import CategoryNotFoundException
-from domain.exceptions import FutureDateException
+from domain.exceptions import FutureBillDateException
 from domain.exceptions import TenantNotFoundException
 from infrastructure.persistence.database.models import DBBill
 from infrastructure.persistence.database.models import DBCategory
@@ -326,11 +326,11 @@ class TestDBBillRepositoryUpdate:
         db_bill_repository: DBBillRepository,
         session: Session,
         db_sample_bill: DBBill,
-        another_tenant: DBTenant,
+        another_db_tenant: DBTenant,
     ):
         with pytest.raises(BillNotFoundException):
             db_bill_repository.update(
-                tenant_id=another_tenant.id,
+                tenant_id=another_db_tenant.id,
                 bill_id=db_sample_bill.id,
                 value=100.00,
             )
@@ -363,7 +363,7 @@ class TestDBBillRepositoryEdgeCases:
     ):
         future_date = datetime.date(2030, 12, 31)
 
-        with pytest.raises(FutureDateException):
+        with pytest.raises(FutureBillDateException):
             db_bill_repository.create(
                 tenant_id=db_tenant.id,
                 date=future_date,

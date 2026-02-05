@@ -4,6 +4,7 @@ from collections.abc import Generator
 from domain.entities import Bill
 from domain.exceptions import BillNotFoundException
 from domain.exceptions import CategoryNotFoundException
+from domain.exceptions import FutureBillDateException
 from domain.exceptions import TenantNotFoundException
 from infrastructure.persistence.database.models import DBBill
 from infrastructure.persistence.database.models import DBCategory
@@ -21,6 +22,12 @@ class DBBillRepository(DBRepository):
         return db_bill
 
     def create(self, tenant_id: int, date: datetime.date, value: float, category_id: int) -> Bill:
+        if value < 0:
+            raise ValueError("Bill value cannot be lass then zero")
+
+        if date > datetime.date.today():
+            raise FutureBillDateException
+
         db_tenant = self.session.query(DBTenant).get(tenant_id)
 
         if db_tenant is None:

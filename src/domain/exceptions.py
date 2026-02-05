@@ -13,7 +13,7 @@ class CategoryNotFoundException(ResourceNotFoundException):
 class BillNotFoundException(ResourceNotFoundException):
     pass
 
-class FutureDateException(Exception):
+class FutureBillDateException(Exception):
     pass
 
 

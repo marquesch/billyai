@@ -2,6 +2,8 @@ import datetime
 from collections.abc import Generator
 
 from domain.entities import Message
+from domain.entities import MessageAuthor
+from domain.entities import MessageBroker
 from domain.exceptions import MessageNotFoundException
 from infrastructure.persistence.database.models import DBMessage
 from infrastructure.persistence.database.repositories import DBRepository
@@ -11,9 +13,9 @@ class DBMessageRepository(DBRepository):
     def create(
         self,
         body: str,
-        author: str,
+        author: MessageAuthor,
         timestamp: datetime.datetime,
-        broker: str,
+        broker: MessageBroker,
         user_id: int,
         tenant_id: int,
         external_message_id: str | None = None,
