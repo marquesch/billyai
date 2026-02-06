@@ -7,7 +7,6 @@ from typing import TypeVar
 
 import redis
 
-from application.services.async_task_service import AsyncTaskService
 from application.services.bill_service import BillService
 from application.services.category_service import CategoryService
 from application.services.registration_service import RegistrationService
@@ -18,7 +17,7 @@ from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
 from domain.ports.services import AIAgentService
 from domain.ports.services import AMQPService
-from domain.ports.services import AsyncTaskDispatcher
+from domain.ports.services import AsyncTaskDispatcherService
 from domain.ports.services import PubsubService
 from domain.ports.services import TemporaryStorageService
 from domain.ports.services import WhatsappBrokerMessageService
@@ -31,7 +30,7 @@ from infrastructure.persistence.database.repositories.tenant_repository import D
 from infrastructure.persistence.database.repositories.user_repository import DBUserRepository
 from infrastructure.services.aio_pika_amqp_service import AioPikaAMQPService
 from infrastructure.services.aio_pika_amqp_service import AioPikaPoolService
-from infrastructure.services.amqp_async_task_dispatcher import AMQPAsyncTaskDispatcher
+from infrastructure.services.amqp_async_task_dispatcher import AMQPAsyncTaskDispatcherService
 from infrastructure.services.amqp_whatsapp_broker_message_service import AMQPWhatsappBrokerMessageService
 from infrastructure.services.pydanticai_agent_service import PydanticAIAgentService
 from infrastructure.services.redis_pubsub_service import RedisPubsubService
@@ -214,13 +213,11 @@ async def setup_global_registry() -> None:
         factory=lambda registration_service,
         temp_storage_service,
         message_repository,
-        user_repository,
         bill_service,
         category_service: PydanticAIAgentService(
             registration_service,
             temp_storage_service,
             message_repository,
-            user_repository,
             bill_service,
             category_service,
             3600,
@@ -229,18 +226,17 @@ async def setup_global_registry() -> None:
             RegistrationService,
             TemporaryStorageService,
             MessageRepository,
-            UserRepository,
             BillService,
             CategoryService,
         ],
     )
 
     def get_broker_url():
-        if app_settings.environment != "test":
+        if app_settings.environment != "testing":
             return app_settings.rabbitmq_url
 
     def get_aio_pika_pool_service():
-        if app_settings.environment != "test":
+        if app_settings.environment != "testing":
             return AioPikaPoolService(get_broker_url())
 
     global_registry.register(
@@ -263,8 +259,8 @@ async def setup_global_registry() -> None:
     )
 
     global_registry.register(
-        AsyncTaskDispatcher,
-        factory=lambda amqp_service: AMQPAsyncTaskDispatcher(amqp_service=amqp_service),
+        AsyncTaskDispatcherService,
+        factory=lambda amqp_service: AMQPAsyncTaskDispatcherService(amqp_service=amqp_service),
         dependencies=[AMQPService],
     )
 
@@ -272,32 +268,4 @@ async def setup_global_registry() -> None:
         WhatsappBrokerMessageService,
         factory=lambda amqp_service: AMQPWhatsappBrokerMessageService(amqp_service=amqp_service),
         dependencies=[AMQPService],
-    )
-
-    global_registry.register(
-        AsyncTaskService,
-        factory=lambda async_task_dispatcher,
-        message_repo,
-        user_repo,
-        tenant_repo,
-        ai_agent_service,
-        pubsub_service,
-        whatsapp_broker_message_service: AsyncTaskService(
-            async_task_dispatcher=async_task_dispatcher,
-            message_repo=message_repo,
-            user_repo=user_repo,
-            tenant_repo=tenant_repo,
-            ai_agent_service=ai_agent_service,
-            pubsub_service=pubsub_service,
-            whatsapp_broker_message_service=whatsapp_broker_message_service,
-        ),
-        dependencies=[
-            AsyncTaskDispatcher,
-            MessageRepository,
-            UserRepository,
-            TenantRepository,
-            AIAgentService,
-            PubsubService,
-            WhatsappBrokerMessageService,
-        ],
     )

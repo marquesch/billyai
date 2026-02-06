@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import Query
 from fastapi.exceptions import HTTPException
 from pydantic import BaseModel
 
@@ -21,14 +22,27 @@ class BillRequest(BaseModel):
     category_id: int | None
 
 
+class BillIndexRequest(BaseModel):
+    date_range: tuple[datetime.date, datetime.date] | None = None
+    value_range: tuple[float, float] | None = None
+    category_id: int | None = None
+
+
 @router.get("/")
 def index(
+    req: Annotated[BillIndexRequest, Query()],
     user: Annotated[User, Depends(dependencies.get_current_user)],
     bill_service: Annotated[BillService, Depends(dependencies.get_bill_service)],
 ):
-    bills = [bill for bill in bill_service.get_many(tenant_id=user.tenant_id)]
-
-    return bills
+    return [
+        bill
+        for bill in bill_service.get_many(
+            tenant_id=user.tenant_id,
+            category_id=req.category_id,
+            date_range=req.date_range,
+            value_range=req.value_range,
+        )
+    ]
 
 
 @router.get("/{bill_id}")
@@ -37,9 +51,8 @@ def get_bill(
     user: Annotated[User, Depends(dependencies.get_current_user)],
     bill_service: Annotated[BillService, Depends(dependencies.get_bill_service)],
 ):
-    try:
-        bill = bill_service.get_by_id(user.tenant_id, bill_id)
-    except BillNotFoundException:
+    bill = bill_service.get_by_id(user.tenant_id, bill_id)
+    if bill is None:
         raise HTTPException(404, detail="Bill not found")
 
     return bill

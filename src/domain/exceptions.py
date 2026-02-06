@@ -13,6 +13,13 @@ class CategoryNotFoundException(ResourceNotFoundException):
 class BillNotFoundException(ResourceNotFoundException):
     pass
 
+class FutureBillDateException(Exception):
+    pass
+
+
+class TenantNotFoundException(ResourceNotFoundException):
+    pass
+
 
 class KeyNotFoundException(ResourceNotFoundException):
     pass

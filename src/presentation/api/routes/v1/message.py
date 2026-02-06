@@ -5,11 +5,11 @@ from fastapi import APIRouter
 from fastapi import Depends
 from pydantic import BaseModel
 
-from application.services.async_task_service import AsyncTaskService
 from domain.entities import MessageAuthor
 from domain.entities import MessageBroker
 from domain.entities import User
 from domain.ports.repositories import MessageRepository
+from domain.ports.services import AsyncTaskDispatcherService
 from presentation.api import dependencies
 
 router = APIRouter(prefix="/messages")
@@ -32,18 +32,21 @@ async def create(
     req: MessageRequest,
     user: Annotated[User, Depends(dependencies.get_current_user)],
     message_repository: Annotated[MessageRepository, Depends(dependencies.get_message_repository)],
-    async_task_service: Annotated[AsyncTaskService, Depends(dependencies.get_async_task_service)],
+    async_task_dispatcher_service: Annotated[
+        AsyncTaskDispatcherService,
+        Depends(dependencies.get_async_task_dispatcher_service),
+    ],
 ):
     message = message_repository.create(
         body=req.body,
         author=MessageAuthor.USER,
-        timestamp=datetime.datetime.now(),
+        timestamp=datetime.datetime.now(tz=datetime.UTC),
         user_id=user.id,
         tenant_id=user.tenant_id,
         broker=MessageBroker.API.value,
         external_message_id=None,
     )
 
-    await async_task_service.process_message.delay(message_id=message.id)
+    await async_task_dispatcher_service.dispatch("process_message", message_id=message.id)
 
     return message

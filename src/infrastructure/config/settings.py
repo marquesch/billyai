@@ -11,7 +11,7 @@ class Environment(Enum):
 
 class Settings(BaseSettings):
     environment: Environment = Environment.DEVELOPMENT
-    database_url: str = "postgresql+psycopg2://billy:billy@postgres:5432/billy?sslmode=disable"
+    database_url: str = "postgresql+psycopg://billy:billy@postgres:5432/billy?sslmode=disable"
     rabbitmq_url: str = "amqp://billy:billy@rabbitmq:5672//"
     redis_host: str = "redis"
     redis_port: int = 6379

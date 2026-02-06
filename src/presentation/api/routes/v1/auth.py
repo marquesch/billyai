@@ -9,7 +9,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from pydantic import field_validator
 
-from application.services.async_task_service import AsyncTaskService
 from application.services.authentication_service import AuthenticationService
 from application.services.registration_service import RegistrationService
 from domain.entities import MessageAuthor
@@ -19,6 +18,7 @@ from domain.exceptions import PhoneNumberTakenException
 from domain.exceptions import RegistrationError
 from domain.exceptions import UserNotFoundException
 from domain.ports.repositories import MessageRepository
+from domain.ports.services import AsyncTaskDispatcherService
 from presentation.api import dependencies
 from presentation.api.dependencies import get_authentication_service
 from presentation.api.dependencies import get_registration_service
@@ -29,10 +29,26 @@ router = APIRouter(prefix="/auth")
 class PhoneNumberRequestMixin:
     phone_number: str
 
+    # TODO: Improve this validation to include international numbers
+    # and other types of brazillian numbers, like landlines
+    # https://pypi.org/project/phonenumbers/
     @field_validator("phone_number")
     @classmethod
     def format_phone_number(cls, v: str) -> str:
-        return re.sub(r"\D", "", v)
+        digits = re.sub(r"\D", "", v)
+
+        if len(digits) > 13 or len(digits) < 10:
+            raise ValueError("Invalid phone number format")
+
+        ddi = "55"
+        if len(digits) > 11:
+            ddi = digits[0:2]
+            digits = digits[2:]
+
+        if len(digits) < 11:
+            digits = f"{digits[0:2]}9{digits[2:]}"
+
+        return f"{ddi}{digits}"
 
 
 class RegisterRequest(BaseModel, PhoneNumberRequestMixin):
@@ -76,10 +92,10 @@ async def verify_registration(
 ):
     try:
         user = registration_service.register_from_token(token)
-    except RegistrationError as e:
-        raise HTTPException(422, detail="Invalid token") from e
     except PhoneNumberTakenException as e:
         raise HTTPException(409, detail="Phone number taken") from e
+    except RegistrationError as e:
+        raise HTTPException(422, detail="Invalid token") from e
 
     return user
 
@@ -92,7 +108,10 @@ async def login(
         Depends(get_authentication_service),
     ],
     message_repository: Annotated[MessageRepository, Depends(dependencies.get_message_repository)],
-    async_task_service: Annotated[AsyncTaskService, Depends(dependencies.get_async_task_service)],
+    async_task_dispatcher_service: Annotated[
+        AsyncTaskDispatcherService,
+        Depends(dependencies.get_async_task_dispatcher_service),
+    ],
 ):
     try:
         pin, user = authentication_service.initiate_authorization(req.phone_number)
@@ -110,7 +129,7 @@ async def login(
         tenant_id=user.tenant_id,
     )
 
-    await async_task_service.process_message.delay(message_id=message.id)
+    await async_task_dispatcher_service.dispatch("process_message", message_id=message.id)
 
     return JSONResponse({"message": "A PIN was sent to your phone"})
 

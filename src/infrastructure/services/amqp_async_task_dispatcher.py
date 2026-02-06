@@ -2,9 +2,9 @@ from domain.ports.services import AMQPService
 from infrastructure.config.settings import app_settings
 
 
-class AMQPAsyncTaskDispatcher:
+class AMQPAsyncTaskDispatcherService:
     def __init__(self, amqp_service: AMQPService):
-        self.amqp_service = amqp_service
+        self._amqp_service = amqp_service
 
     async def dispatch(self, task_name: str, **kwargs):
         payload = {
@@ -12,4 +12,4 @@ class AMQPAsyncTaskDispatcher:
             "kwargs": kwargs,
         }
 
-        await self.amqp_service.publish(payload, app_settings.async_task_routing_key)
+        await self._amqp_service.publish(payload, app_settings.async_task_routing_key)

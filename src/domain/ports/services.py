@@ -36,7 +36,7 @@ class PubsubService(Protocol):
     async def listen(self) -> AsyncIterator: ...
 
 
-class AsyncTaskDispatcher(Protocol):
+class AsyncTaskDispatcherService(Protocol):
     async def dispatch(self, task_name: str, **kwargs) -> None: ...
 
 
