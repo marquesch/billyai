@@ -45,7 +45,7 @@ from infrastructure.services.redis_temporary_storage_service import RedisTempora
 
 security = HTTPBearer()
 
-aio_pika_pool_service = AioPikaPoolService(app_settings.rabbitmq_url)
+aio_pika_pool_service = AioPikaPoolService(app_settings.rabbitmq_uri)
 
 
 def get_session() -> Generator[Session, None, None]:

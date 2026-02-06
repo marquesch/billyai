@@ -70,12 +70,32 @@ jobs:
             docker rm billy-api || true
             docker run -d --name billy-api \
               -p 80:8080 \
-              -e DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }} \
+              -e DATABASE_USER="${{ secrets.DATABASE_USER }}" \
+              -e DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
+              -e DATABASE_HOST="${{ secrets.DB_HOST }}" \
+              -e DATABASE_PORT=5432 \
+              -e RABBITMQ_USER="${{ secrets.RABBITMQ_USER }}" \
+              -e RABBITMQ_PASSWORD="${{ secrets.RABBITMQ_PASSWORD }}" \
+              -e RABBITMQ_HOST="${{ secrets.DB_HOST }}" \
+              -e RABBITMQ_PORT=5672 \
+              -e REDIS_HOST="${{ secrets.DB_HOST }}" \
+              -e REDIS_PORT=6379 \
+              -e DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
               ghcr.io/${{ github.repository }}:latest
 
             docker stop billy-async-jobs || true
             docker rm billy-async-jobs || true
             docker run -d --name billy-async-jobs \
-              -e DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }} \
+              -e DATABASE_USER="${{ secrets.DATABASE_USER }}" \
+              -e DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
+              -e DATABASE_HOST="${{ secrets.DB_HOST }}" \
+              -e DATABASE_PORT=5432 \
+              -e RABBITMQ_USER="${{ secrets.RABBITMQ_USER }}" \
+              -e RABBITMQ_PASSWORD="${{ secrets.RABBITMQ_PASSWORD }}" \
+              -e RABBITMQ_HOST="${{ secrets.DB_HOST }}" \
+              -e RABBITMQ_PORT=5672 \
+              -e REDIS_HOST="${{ secrets.DB_HOST }}" \
+              -e REDIS_PORT=6379 \
+              -e DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
               ghcr.io/${{ github.repository }}:latest \
               python -u async.py

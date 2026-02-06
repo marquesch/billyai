@@ -11,8 +11,17 @@ class Environment(Enum):
 
 class Settings(BaseSettings):
     environment: Environment = Environment.DEVELOPMENT
-    database_url: str = "postgresql+psycopg://billy:billy@postgres:5432/billy?sslmode=disable"
-    rabbitmq_url: str = "amqp://billy:billy@rabbitmq:5672//"
+
+    database_user: str = "billy"
+    database_password: str = "billy"
+    database_host: str = "postgres"
+    database_port: int = 5432
+    database_db: str = "billy"
+
+    rabbitmq_user: str = "billy"
+    rabbitmq_password: str = "billy"
+    rabbitmq_host: str = "rabbitmq"
+    rabbitmq_port: int = 5672
     redis_host: str = "redis"
     redis_port: int = 6379
     deepseek_api_key: str = ""
@@ -22,6 +31,17 @@ class Settings(BaseSettings):
     async_task_routing_key: str = "async_tasks"
     whatsapp_message_routing_key: str = "whatsapp_message"
     async_task_prefetch_count: int = 5
+
+    @property
+    def rabbitmq_uri(self):
+        return f"amqp://{self.rabbitmq_user}:{self.rabbitmq_password}@{self.rabbitmq_host}:{self.rabbitmq_port}//"
+
+    @property
+    def database_uri(self):
+        return (
+            f"postgresql+psycopg://{self.database_user}:{self.database_password}"
+            f"@{self.database_host}:{self.database_port}/{self.database_db}?sslmode=disable"
+        )
 
     @property
     def debug(self):

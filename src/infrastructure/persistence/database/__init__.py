@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 from infrastructure.config.settings import app_settings
 
-engine = create_engine(app_settings.database_url)
+engine = create_engine(app_settings.database_uri)
 SessionLocal: type[sa.orm.Session] = sessionmaker(engine)
 
 
