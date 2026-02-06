@@ -66,4 +66,7 @@ jobs:
             docker pull ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
             docker stop billy-api || true
             docker rm billy-api || true
-            docker run -d --name billy-api -p 80:8080 ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
+            docker run -d --name billy-api\
+              -p 80:8080 \
+              -e DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }} \
+              ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
