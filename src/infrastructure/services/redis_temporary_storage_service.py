@@ -6,7 +6,12 @@ import redis
 from domain.exceptions import KeyNotFoundException
 from infrastructure.config import settings
 
-redis_pool = redis.ConnectionPool(host=settings.app_settings.redis_host, port=settings.app_settings.redis_port, db=0)
+redis_pool = redis.ConnectionPool(
+    host=settings.app_settings.redis_host,
+    port=settings.app_settings.redis_port,
+    db=0,
+    password=settings.app_settings.redis_password,
+)
 
 
 class RedisTemporaryStorageService:

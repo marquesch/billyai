@@ -80,6 +80,7 @@ jobs:
               -e RABBITMQ_PORT=5672 \
               -e REDIS_HOST="${{ secrets.DB_HOST }}" \
               -e REDIS_PORT=6379 \
+              -e REDIS_PASSWORD="${{ secrets.REDIS_PASWORD }}" \
               -e DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
               --restart=always \
               ghcr.io/${{ github.repository }}:latest
@@ -97,6 +98,7 @@ jobs:
               -e RABBITMQ_PORT=5672 \
               -e REDIS_HOST="${{ secrets.DB_HOST }}" \
               -e REDIS_PORT=6379 \
+              -e REDIS_PASSWORD="${{ secrets.REDIS_PASWORD }}" \
               -e DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
               --restart=always \
               ghcr.io/${{ github.repository }}:latest \
