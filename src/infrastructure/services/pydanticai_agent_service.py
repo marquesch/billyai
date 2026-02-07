@@ -93,9 +93,9 @@ class PydanticAIAgentService:
         pydantic_messages = []
         for message in messages:
             match message.author:
-                case MessageAuthor.USER.value:
+                case MessageAuthor.USER:
                     pydantic_messages.append(ModelRequest(parts=[UserPromptPart(content=message.body)]))
-                case MessageAuthor.BILLY.value:
+                case MessageAuthor.BILLY:
                     pydantic_messages.append(ModelResponse(parts=[TextPart(content=message.body)]))
 
         return pydantic_messages

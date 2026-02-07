@@ -70,15 +70,15 @@ class ProcessMessage(AsyncTask):
         self._message_repository = message_repository
 
     async def __call__(self, message_id: int):
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
         try:
             message = self._message_repository.get_by_id(message_id)
         except MessageNotFoundException:
             return
         await NotifyUser.dispatch(self._async_task_dispatcher, message_id=message.id)
-        if message.author == MessageAuthor.USER.value:
+        if message.author == MessageAuthor.USER:
             await RunAgent.dispatch(self._async_task_dispatcher, message_id=message.id)
-        elif message.broker == MessageBroker.WHATSAPP.value:
+        elif message.broker == MessageBroker.WHATSAPP:
             await SendMessage.dispatch(self._async_task_dispatcher, message_id=message.id)
 
 
@@ -97,10 +97,10 @@ class NotifyUser(AsyncTask):
         message = self._message_repository.get_by_id(message_id)
         message_data = {
             "id": message.id,
-            "author": message.author,
+            "author": message.author.value,
             "body": message.body,
             "timestamp": message.timestamp.isoformat(),
-            "broker": message.broker,
+            "broker": message.broker.value,
         }
         await self._pubsub_service.publish(channel=str(message.tenant_id), event="new-message", data=message_data)
 
