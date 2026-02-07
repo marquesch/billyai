@@ -81,6 +81,7 @@ jobs:
               -e REDIS_HOST="${{ secrets.DB_HOST }}" \
               -e REDIS_PORT=6379 \
               -e DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
+              --restart=always \
               ghcr.io/${{ github.repository }}:latest
 
             docker stop billy-async-jobs || true
@@ -97,6 +98,7 @@ jobs:
               -e REDIS_HOST="${{ secrets.DB_HOST }}" \
               -e REDIS_PORT=6379 \
               -e DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
+              --restart=always \
               ghcr.io/${{ github.repository }}:latest \
               python -u async.py
 
@@ -121,4 +123,5 @@ jobs:
               -e RABBITMQ_PASSWORD="${{ secrets.RABBITMQ_PASSWORD }}" \
               -e RABBITMQ_HOST="${{ secrets.DB_HOST }}" \
               -e RABBITMQ_PORT=5672 \
+              --restart=always \
               ghcr.io/marquesch/whatsapp-worker:latest
