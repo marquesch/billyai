@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 import traceback
 
 from application.use_cases import async_tasks
@@ -9,11 +10,15 @@ from infrastructure.di import global_registry
 from infrastructure.di import resolve
 from infrastructure.di import setup_global_registry
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
 logger = logging.getLogger(__name__)
 
 
 async def worker_callback(payload: dict):
+    started_at = time.perf_counter()
     task_name = payload.get("task")
     task_kwargs = payload.get("kwargs", {})
 
@@ -30,7 +35,9 @@ async def worker_callback(payload: dict):
             task = task_cls(*task_build_args)
 
             await task(**task_kwargs)
-            logger.info(f"Finished task: {task_name}")
+
+            time_taken = time.perf_counter() - started_at
+            logger.info(f"Finished task: {task_name} in {time_taken:.4f} seconds")
 
         except Exception as e:
             logger.exception(f"Error processing task {task_name}: {e}")
