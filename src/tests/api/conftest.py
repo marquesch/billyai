@@ -57,34 +57,34 @@ def mock_async_task_dispatcher_service(mocker) -> mock.AsyncMock():
 
 
 @pytest.fixture
-def unregistered_user(
+def in_memory_unregistered_user(
     in_memory_temporary_storage_service: InMemoryTemporaryStorageService,
 ):
     in_memory_temporary_storage_service.set("token", {"phone_number": "5541999999999", "name": "Test User"})
 
 
 @pytest.fixture
-def user_login_initiated(registered_user: User, in_memory_temporary_storage_service: InMemoryTemporaryStorageService):
+def user_login_initiated(in_memory_registered_user: User, in_memory_temporary_storage_service: InMemoryTemporaryStorageService):
     in_memory_temporary_storage_service.set(
-        f"user:{registered_user.id}:pin",
-        {"pin": "999999", "user_phone": registered_user.phone_number},
+        f"user:{in_memory_registered_user.id}:pin",
+        {"pin": "999999", "user_phone": in_memory_registered_user.phone_number},
     )
-    return registered_user
+    return in_memory_registered_user
 
 
 @pytest.fixture
-def mock_user(registered_user: User) -> User:
-    app.dependency_overrides[dependencies.get_current_user] = lambda: registered_user
-    return registered_user
+def mock_user(in_memory_registered_user: User) -> User:
+    app.dependency_overrides[dependencies.get_current_user] = lambda: in_memory_registered_user
+    return in_memory_registered_user
 
 
 @pytest.fixture
-def mock_user_same_tenant(registered_user_same_tenant: User):
-    app.dependency_overrides[dependencies.get_current_user] = lambda: registered_user_same_tenant
-    return registered_user_same_tenant
+def mock_user_same_tenant(in_memory_registered_user_same_tenant: User):
+    app.dependency_overrides[dependencies.get_current_user] = lambda: in_memory_registered_user_same_tenant
+    return in_memory_registered_user_same_tenant
 
 
 @pytest.fixture
-def mock_user_from_another_tenant(user_from_another_tenant: User) -> User:
-    app.dependency_overrides[dependencies.get_current_user] = lambda: user_from_another_tenant
-    return user_from_another_tenant
+def mock_user_from_another_tenant(in_memory_user_from_another_tenant: User) -> User:
+    app.dependency_overrides[dependencies.get_current_user] = lambda: in_memory_user_from_another_tenant
+    return in_memory_user_from_another_tenant
