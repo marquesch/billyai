@@ -5,9 +5,7 @@ from redis import asyncio as redis
 
 from infrastructure.config.settings import app_settings
 
-async_redis_pool = redis.ConnectionPool(
-    host=app_settings.redis_host, port=app_settings.redis_port, password=app_settings.redis_password
-)
+async_redis_pool = redis.ConnectionPool(host=app_settings.redis_host, port=app_settings.redis_port)
 
 
 class RedisPubsubService:

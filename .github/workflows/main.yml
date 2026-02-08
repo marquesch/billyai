@@ -66,43 +66,43 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             docker pull ghcr.io/${{ github.repository }}:latest
-            docker stop billy-api || true
-            docker rm billy-api || true
+            docker stop billy-api
+            docker rm billy-api
             docker run -d --name billy-api \
               -p 80:8080 \
-              -e DATABASE_USER="${{ secrets.DATABASE_USER }}" \
+              -e DATABASE_USER="${{ vars.DATABASE_USER }}" \
               -e DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
               -e DATABASE_HOST="${{ secrets.DB_HOST }}" \
               -e DATABASE_PORT=5432 \
-              -e RABBITMQ_USER="${{ secrets.RABBITMQ_USER }}" \
+              -e RABBITMQ_USER="${{ vars.RABBITMQ_USER  }}" \
               -e RABBITMQ_PASSWORD="${{ secrets.RABBITMQ_PASSWORD }}" \
               -e RABBITMQ_HOST="${{ secrets.DB_HOST }}" \
               -e RABBITMQ_PORT=5672 \
               -e REDIS_HOST="${{ secrets.DB_HOST }}" \
               -e REDIS_PORT=6379 \
-              -e REDIS_PASSWORD="${{ secrets.REDIS_PASWORD }}" \
               -e DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
               --restart=always \
               ghcr.io/${{ github.repository }}:latest
 
-            docker stop billy-async-jobs || true
-            docker rm billy-async-jobs || true
+            docker stop billy-async-jobs
+            docker rm billy-async-jobs
             docker run -d --name billy-async-jobs \
-              -e DATABASE_USER="${{ secrets.DATABASE_USER }}" \
+              -e DATABASE_USER="${{ vars.DATABASE_USER }}" \
               -e DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
               -e DATABASE_HOST="${{ secrets.DB_HOST }}" \
               -e DATABASE_PORT=5432 \
-              -e RABBITMQ_USER="${{ secrets.RABBITMQ_USER }}" \
+              -e RABBITMQ_USER="${{ vars.RABBITMQ_USER  }}" \
               -e RABBITMQ_PASSWORD="${{ secrets.RABBITMQ_PASSWORD }}" \
               -e RABBITMQ_HOST="${{ secrets.DB_HOST }}" \
               -e RABBITMQ_PORT=5672 \
               -e REDIS_HOST="${{ secrets.DB_HOST }}" \
               -e REDIS_PORT=6379 \
-              -e REDIS_PASSWORD="${{ secrets.REDIS_PASWORD }}" \
               -e DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
               --restart=always \
               ghcr.io/${{ github.repository }}:latest \
               python -u async.py
+
+            docker system prune -f
 
   deploy-whatsapp-client:
     runs-on: ubuntu-latest
@@ -117,11 +117,11 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             docker pull ghcr.io/marquesch/whatsapp-worker:latest
-            docker stop whatsapp-client || true
-            docker rm whatsapp-client || true
+            docker stop whatsapp-client
+            docker rm whatsapp-client
             docker run -d --name whatsapp-client \
               --mount type=volume,src=whatsapp-client-storage,dst=/root/storage \
-              -e RABBITMQ_USER="${{ secrets.RABBITMQ_USER }}" \
+              -e RABBITMQ_USER="${{ vars.RABBITMQ_USER  }}" \
               -e RABBITMQ_PASSWORD="${{ secrets.RABBITMQ_PASSWORD }}" \
               -e RABBITMQ_HOST="${{ secrets.DB_HOST }}" \
               -e RABBITMQ_PORT=5672 \

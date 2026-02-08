@@ -10,7 +10,6 @@ redis_pool = redis.ConnectionPool(
     host=settings.app_settings.redis_host,
     port=settings.app_settings.redis_port,
     db=0,
-    password=settings.app_settings.redis_password,
 )
 
 
