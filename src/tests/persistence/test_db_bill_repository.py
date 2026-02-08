@@ -257,7 +257,7 @@ class TestDBBillRepositoryUpdate:
         session: Session,
         db_tenant: DBTenant,
         db_sample_bill: DBBill,
-        another_category: DBCategory,
+        in_memory_another_category: DBCategory,
     ):
         original_date = db_sample_bill.date
         original_value = db_sample_bill.value
@@ -265,10 +265,10 @@ class TestDBBillRepositoryUpdate:
         updated_bill = db_bill_repository.update(
             tenant_id=db_tenant.id,
             bill_id=db_sample_bill.id,
-            category_id=another_category.id,
+            category_id=in_memory_another_category.id,
         )
 
-        assert updated_bill.category_id == another_category.id
+        assert updated_bill.category_id == in_memory_another_category.id
         assert updated_bill.date == original_date
         assert updated_bill.value == original_value
 

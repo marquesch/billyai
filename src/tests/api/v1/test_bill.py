@@ -5,7 +5,7 @@ from domain.entities import Category
 from domain.entities import User
 
 
-def test_index(client: TestClient, mock_user: User, bills: list[Bill]):
+def test_index(client: TestClient, mock_user: User, in_memory_bills: list[Bill]):
     response = client.get("/api/v1/bills/")
 
     assert response.status_code == 200
@@ -34,7 +34,7 @@ def test_index(client: TestClient, mock_user: User, bills: list[Bill]):
     ]
 
 
-def test_index_filter_by_date_range(client: TestClient, mock_user: User, bills: list[Bill]):
+def test_index_filter_by_date_range(client: TestClient, mock_user: User, in_memory_bills: list[Bill]):
     response = client.get("/api/v1/bills/?date_range=2012-12-12&date_range=2012-12-13")
 
     assert response.status_code == 200
@@ -49,7 +49,7 @@ def test_index_filter_by_date_range(client: TestClient, mock_user: User, bills: 
     ]
 
 
-def test_index_filter_by_category_id(client: TestClient, mock_user: User, bills: list[Bill]):
+def test_index_filter_by_category_id(client: TestClient, mock_user: User, in_memory_bills: list[Bill]):
     response = client.get("/api/v1/bills/?category_id=2")
 
     assert response.status_code == 200
@@ -64,7 +64,7 @@ def test_index_filter_by_category_id(client: TestClient, mock_user: User, bills:
     ]
 
 
-def test_index_filter_by_value_range(client: TestClient, mock_user: User, bills: list[Bill]):
+def test_index_filter_by_value_range(client: TestClient, mock_user: User, in_memory_bills: list[Bill]):
     response = client.get("/api/v1/bills/?value_range=99&value_range=200")
 
     assert response.status_code == 200
@@ -86,7 +86,7 @@ def test_index_filter_by_value_range(client: TestClient, mock_user: User, bills:
     ]
 
 
-def test_index_same_tenant(client: TestClient, mock_user_same_tenant: User, bills: list[Bill]):
+def test_index_same_tenant(client: TestClient, mock_user_same_tenant: User, in_memory_bills: list[Bill]):
     response = client.get("/api/v1/bills/")
 
     assert response.status_code == 200
@@ -117,7 +117,7 @@ def test_index_same_tenant(client: TestClient, mock_user_same_tenant: User, bill
 
 def test_index_not_showing_for_user_from_another_tenant(
     client: TestClient,
-    bills: list[Bill],
+    in_memory_bills: list[Bill],
     mock_user_from_another_tenant: User,
 ):
     response = client.get("/api/v1/bills/")
@@ -132,7 +132,7 @@ def test_index_no_logged_user(client: TestClient):
     assert response.status_code == 401
 
 
-def test_get_bill(client: TestClient, mock_user: User, bills: list[Bill]):
+def test_get_bill(client: TestClient, mock_user: User, in_memory_bills: list[Bill]):
     response = client.get("/api/v1/bills/1")
 
     assert response.status_code == 200
@@ -145,7 +145,7 @@ def test_get_bill(client: TestClient, mock_user: User, bills: list[Bill]):
     }
 
 
-def test_get_bill_user_same_tenant(client: TestClient, mock_user_same_tenant: User, bills: list[Bill]):
+def test_get_bill_user_same_tenant(client: TestClient, mock_user_same_tenant: User, in_memory_bills: list[Bill]):
     response = client.get("/api/v1/bills/1")
 
     assert response.status_code == 200
@@ -166,7 +166,7 @@ def test_get_bill_no_logged_user(client: TestClient):
 
 def test_get_bill_for_user_from_another_tenant(
     client: TestClient,
-    bills: list[Bill],
+    in_memory_bills: list[Bill],
     mock_user_from_another_tenant: User,
 ):
     response = client.get("/api/v1/bills/1")
@@ -177,7 +177,7 @@ def test_get_bill_for_user_from_another_tenant(
 
 def test_create_bill(
     client: TestClient,
-    default_category: Category,
+    in_memory_default_category: Category,
     mock_user: User,
 ):
     response = client.post(
@@ -228,7 +228,7 @@ def test_create_bill_inexistent_category(client: TestClient, mock_user: User):
 
 def test_create_bill_with_category_from_another_tenant(
     client: TestClient,
-    default_category: Category,
+    in_memory_default_category: Category,
     mock_user_from_another_tenant: User,
 ):
     response = client.post(
@@ -247,9 +247,9 @@ def test_create_bill_with_category_from_another_tenant(
 def test_update_bill(
     client: TestClient,
     mock_user: User,
-    default_category: Category,
-    another_category: Category,
-    bills: list[Bill],
+    in_memory_default_category: Category,
+    in_memory_another_category: Category,
+    in_memory_bills: list[Bill],
 ):
     response = client.put(
         "/api/v1/bills/1",
@@ -273,9 +273,9 @@ def test_update_bill(
 def test_update_bill_from_another_tenant(
     client: TestClient,
     mock_user_from_another_tenant: User,
-    default_category: Category,
-    another_category: Category,
-    bills: list[Bill],
+    in_memory_default_category: Category,
+    in_memory_another_category: Category,
+    in_memory_bills: list[Bill],
 ):
     response = client.put(
         "/api/v1/bills/1",
@@ -293,8 +293,8 @@ def test_update_bill_from_another_tenant(
 def test_update_bill_inexistent_category_id(
     client: TestClient,
     mock_user: User,
-    default_category: Category,
-    bills: list[Bill],
+    in_memory_default_category: Category,
+    in_memory_bills: list[Bill],
 ):
     response = client.put(
         "/api/v1/bills/1",
@@ -312,9 +312,9 @@ def test_update_bill_inexistent_category_id(
 def test_update_bill_with_category_from_another_tenant(
     client: TestClient,
     mock_user: User,
-    default_category: Category,
-    bills: list[Bill],
-    category_from_another_tenant: Category,
+    in_memory_default_category: Category,
+    in_memory_bills: list[Bill],
+    in_memory_category_from_another_tenant: Category,
 ):
     response = client.put(
         "/api/v1/bills/1",

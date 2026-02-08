@@ -9,7 +9,11 @@ from domain.entities import MessageAuthor
 from domain.entities import MessageBroker
 from domain.entities import Tenant
 from domain.entities import User
+from domain.ports.services import AIAgentService
 from domain.ports.services import AMQPService
+from domain.ports.services import AsyncTaskDispatcherService
+from domain.ports.services import PubsubService
+from domain.ports.services import WhatsappBrokerMessageService
 from infrastructure.persistence.memory.repositories import InMemoryDatabase
 from infrastructure.persistence.memory.repositories.bill_repository import InMemoryBillRepository
 from infrastructure.persistence.memory.repositories.category_repository import InMemoryCategoryRepository
@@ -60,101 +64,165 @@ def mock_amqp_service(mocker) -> AMQPService:
 
 
 @pytest.fixture
-def tenant(in_memory_tenant_repository: InMemoryTenantRepository) -> Tenant:
+def mock_async_task_dispatcher(mocker) -> AsyncTaskDispatcherService:
+    return mocker.AsyncMock()
+
+
+@pytest.fixture
+def mock_pubsub_service(mocker) -> PubsubService:
+    return mocker.AsyncMock()
+
+
+@pytest.fixture
+def mock_ai_agent_service(mocker) -> AIAgentService:
+    mock_ai_agent_service = mocker.AsyncMock()
+    mock_ai_agent_service.run.return_value = "Mock AI response"
+
+    return mock_ai_agent_service
+
+
+@pytest.fixture
+def mock_whatsapp_service(mocker) -> WhatsappBrokerMessageService:
+    return mocker.AsyncMock()
+
+
+@pytest.fixture
+def in_memory_tenant(in_memory_tenant_repository: InMemoryTenantRepository) -> Tenant:
     return in_memory_tenant_repository.create()
 
 
 @pytest.fixture
-def default_category(in_memory_category_repository: InMemoryCategoryRepository, tenant: Tenant) -> Category:
+def in_memory_default_category(
+    in_memory_category_repository: InMemoryCategoryRepository,
+    in_memory_tenant: Tenant,
+) -> Category:
     return in_memory_category_repository.create(
-        tenant_id=tenant.id,
+        tenant_id=in_memory_tenant.id,
         name="Default Category",
         description="Default Category description",
     )
 
 
 @pytest.fixture
-def another_category(in_memory_category_repository: InMemoryCategoryRepository, tenant: Tenant) -> Category:
+def in_memory_another_category(in_memory_category_repository: InMemoryCategoryRepository, in_memory_tenant: Tenant) -> Category:
     return in_memory_category_repository.create(
-        tenant_id=tenant.id,
+        tenant_id=in_memory_tenant.id,
         name="Another Category",
         description="Another Category description",
     )
 
 
 @pytest.fixture
-def registered_user(
+def in_memory_registered_user(
     in_memory_user_repository: InMemoryUserRepository,
-    tenant: Tenant,
+    in_memory_tenant: Tenant,
 ) -> User:
     return in_memory_user_repository.create(
         phone_number="5541999999999",
         name="Test User",
-        tenant_id=tenant.id,
+        tenant_id=in_memory_tenant.id,
         is_registered=True,
     )
 
 
 @pytest.fixture
-def registered_user_same_tenant(
+def in_memory_message_from_user(
+    in_memory_message_repository: InMemoryMessageRepository,
+    in_memory_registered_user: User,
+    in_memory_tenant: Tenant,
+) -> Message:
+    return in_memory_message_repository.create(
+        body="User message",
+        author=MessageAuthor.USER,
+        timestamp=datetime.datetime(2025, 1, 20, 10, 30, 0),
+        broker=MessageBroker.WHATSAPP,
+        user_id=in_memory_registered_user.id,
+        tenant_id=in_memory_tenant.id,
+    )
+
+
+@pytest.fixture
+def in_memory_message_from_bot(
+    in_memory_message_repository: InMemoryMessageRepository,
+    in_memory_registered_user: User,
+    in_memory_tenant: Tenant,
+) -> Message:
+    return in_memory_message_repository.create(
+        body="Bot response",
+        author=MessageAuthor.BILLY,
+        timestamp=datetime.datetime(2025, 1, 20, 10, 31, 0),
+        broker=MessageBroker.WHATSAPP,
+        user_id=in_memory_registerd_user.id,
+        tenant_id=in_memory_tenant.id,
+    )
+
+
+@pytest.fixture
+def in_memory_registered_user_same_tenant(
     in_memory_user_repository: InMemoryUserRepository,
-    tenant: Tenant,
+    in_memory_tenant: Tenant,
 ) -> User:
     return in_memory_user_repository.create(
         phone_number="5541999999997",
         name="User Same Tenant",
-        tenant_id=tenant.id,
+        tenant_id=in_memory_tenant.id,
         is_registered=True,
     )
 
 
 @pytest.fixture
-def another_tenant(in_memory_tenant_repository: InMemoryTenantRepository) -> Tenant:
+def in_memory_another_tenant(in_memory_tenant_repository: InMemoryTenantRepository) -> Tenant:
     return in_memory_tenant_repository.create()
 
 
 @pytest.fixture
-def user_from_another_tenant(in_memory_user_repository: InMemoryUserRepository, another_tenant: Tenant) -> User:
+def in_memory_user_from_another_tenant(
+    in_memory_user_repository: InMemoryUserRepository,
+    in_memory_another_tenant: Tenant,
+) -> User:
     return in_memory_user_repository.create(
         phone_number="5541999999998",
         name="User From Another Tenant",
-        tenant_id=another_tenant.id,
+        tenant_id=in_memory_another_tenant.id,
         is_registered=True,
     )
 
 
 @pytest.fixture
-def category_from_another_tenant(in_memory_category_repository: InMemoryCategoryRepository, another_tenant: Tenant):
+def in_memory_category_from_another_tenant(
+    in_memory_category_repository: InMemoryCategoryRepository,
+    in_memory_another_tenant: Tenant,
+):
     return in_memory_category_repository.create(
-        tenant_id=another_tenant.id,
+        tenant_id=in_memory_another_tenant.id,
         name="Category From Another Tenant",
         description="Category From Another Tenant Description",
     )
 
 
 @pytest.fixture
-def bills(
+def in_memory_bills(
     in_memory_bill_repository: InMemoryBillRepository,
-    default_category: Category,
-    another_category: Category,
-    tenant: Tenant,
+    in_memory_default_category: Category,
+    in_memory_another_category: Category,
+    in_memory_tenant: Tenant,
 ) -> list[Bill]:
     return [
         in_memory_bill_repository.create(
-            tenant_id=tenant.id,
-            category_id=default_category.id,
+            tenant_id=in_memory_tenant.id,
+            category_id=in_memory_default_category.id,
             date=datetime.datetime.strptime("2012-12-12", "%Y-%m-%d").date(),
             value=10.5,
         ),
         in_memory_bill_repository.create(
-            tenant_id=tenant.id,
-            category_id=default_category.id,
+            tenant_id=in_memory_tenant.id,
+            category_id=in_memory_default_category.id,
             date=datetime.datetime.strptime("2024-12-12", "%Y-%m-%d").date(),
             value=99.90,
         ),
         in_memory_bill_repository.create(
-            tenant_id=tenant.id,
-            category_id=another_category.id,
+            tenant_id=in_memory_tenant.id,
+            category_id=in_memory_another_category.id,
             date=datetime.datetime.strptime("2024-12-13", "%Y-%m-%d").date(),
             value=199.90,
         ),
@@ -162,10 +230,10 @@ def bills(
 
 
 @pytest.fixture
-def messages(
+def in_memory_messages(
     in_memory_message_repository: InMemoryMessageRepository,
-    tenant: Tenant,
-    registered_user: User,
+    in_memory_tenant: Tenant,
+    in_memory_registered_user: User,
 ) -> list[Message]:
     return [
         in_memory_message_repository.create(
@@ -173,16 +241,16 @@ def messages(
             author=MessageAuthor.USER,
             timestamp=datetime.datetime.fromisoformat("2025-01-01T13:00:00Z"),
             broker=MessageBroker.API,
-            user_id=registered_user.id,
-            tenant_id=tenant.id,
+            user_id=in_memory_registered_user.id,
+            tenant_id=in_memory_tenant.id,
         ),
         in_memory_message_repository.create(
             body="Billy message",
             author=MessageAuthor.BILLY,
             timestamp=datetime.datetime.fromisoformat("2025-01-01T13:01:00Z"),
             broker=MessageBroker.API,
-            user_id=registered_user.id,
-            tenant_id=tenant.id,
+            user_id=in_memory_registered_user.id,
+            tenant_id=in_memory_tenant.id,
         ),
         in_memory_message_repository.create(
             body="User whatsapp message",
@@ -190,8 +258,8 @@ def messages(
             timestamp=datetime.datetime.fromisoformat("2025-01-01T13:02:00Z"),
             broker=MessageBroker.WHATSAPP,
             external_message_id="userwppmsgid",
-            user_id=registered_user.id,
-            tenant_id=tenant.id,
+            user_id=in_memory_registered_user.id,
+            tenant_id=in_memory_tenant.id,
         ),
         in_memory_message_repository.create(
             body="Billy whatsapp message",
@@ -199,7 +267,7 @@ def messages(
             timestamp=datetime.datetime.fromisoformat("2025-01-01T13:03:00Z"),
             broker=MessageBroker.WHATSAPP,
             external_message_id="billywppmsgid",
-            user_id=registered_user.id,
-            tenant_id=tenant.id,
+            user_id=in_memory_registered_user.id,
+            tenant_id=in_memory_tenant.id,
         ),
     ]

@@ -7,7 +7,7 @@ from domain.entities import Message
 from domain.entities import User
 
 
-def test_message_index(client: TestClient, mock_user: User, messages: list[Message]):
+def test_message_index(client: TestClient, mock_user: User, in_memory_messages: list[Message]):
     response = client.get("/api/v1/messages/")
 
     assert response.status_code == 200
@@ -58,7 +58,7 @@ def test_message_index(client: TestClient, mock_user: User, messages: list[Messa
 def test_message_index_user_from_same_tenant(
     client: TestClient,
     mock_user_same_tenant: User,
-    messages: list[Message],
+    in_memory_messages: list[Message],
 ):
     response = client.get("/api/v1/messages/")
 
@@ -69,7 +69,7 @@ def test_message_index_user_from_same_tenant(
 def test_message_index_user_from_another_tenant(
     client: TestClient,
     mock_user_from_another_tenant: User,
-    messages: list[Message],
+    in_memory_messages: list[Message],
 ):
     response = client.get("/api/v1/messages/")
 

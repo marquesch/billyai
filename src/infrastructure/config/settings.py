@@ -16,7 +16,10 @@ class Settings(BaseSettings):
     database_password: str = "billy"
     database_host: str = "postgres"
     database_port: int = 5432
+    database_dialect: str = "postgresql"
+    database_driver: str = "psycopg"
     database_db: str = "billy"
+    test_database_uri: str | None
 
     rabbitmq_user: str = "billy"
     rabbitmq_password: str = "billy"
@@ -40,7 +43,7 @@ class Settings(BaseSettings):
 
     @property
     def database_uri(self):
-        return (
+        return self.test_database_uri or (
             f"postgresql+psycopg://{self.database_user}:{self.database_password}"
             f"@{self.database_host}:{self.database_port}/{self.database_db}?sslmode=disable"
         )
