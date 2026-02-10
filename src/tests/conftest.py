@@ -152,7 +152,7 @@ def in_memory_message_from_bot(
         author=MessageAuthor.BILLY,
         timestamp=datetime.datetime(2025, 1, 20, 10, 31, 0),
         broker=MessageBroker.WHATSAPP,
-        user_id=in_memory_registerd_user.id,
+        user_id=in_memory_registered_user.id,
         tenant_id=in_memory_tenant.id,
     )
 

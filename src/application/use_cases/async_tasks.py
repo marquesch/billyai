@@ -1,10 +1,8 @@
-import asyncio
 import datetime
 
 from application.use_cases import AsyncTask
 from domain.entities import MessageAuthor
 from domain.entities import MessageBroker
-from domain.exceptions import MessageNotFoundException
 from domain.ports.repositories import MessageRepository
 from domain.ports.repositories import TenantRepository
 from domain.ports.repositories import UserRepository
@@ -70,11 +68,7 @@ class ProcessMessage(AsyncTask):
         self._message_repository = message_repository
 
     async def __call__(self, message_id: int):
-        await asyncio.sleep(1)
-        try:
-            message = self._message_repository.get_by_id(message_id)
-        except MessageNotFoundException:
-            return
+        message = self._message_repository.get_by_id(message_id)
         await NotifyUser.dispatch(self._async_task_dispatcher, message_id=message.id)
         if message.author == MessageAuthor.USER:
             await RunAgent.dispatch(self._async_task_dispatcher, message_id=message.id)
