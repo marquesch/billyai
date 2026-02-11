@@ -39,7 +39,6 @@ async def publish_message(redis_client: aioredis.FakeRedis) -> Callable[[str, st
 async def pubsub_subscribed_to_channel(redis_pubsub: redis.asyncio.client.PubSub) -> redis.asyncio.client.PubSub:
     await redis_pubsub.subscribe("test-channel")
     await redis_pubsub.get_message()
-    print(type(redis_pubsub))
     return redis_pubsub
 
 

@@ -118,8 +118,6 @@ async def login(
     except UserNotFoundException as e:
         raise HTTPException(404, detail="User not found") from e
 
-    print(pin)
-
     message = message_repository.create(
         body=f"Seu PIN é {pin}",
         author=MessageAuthor.SYSTEM,

@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from string import Template
 
 from pydantic_ai import Agent
-from pydantic_ai import FunctionToolset
 from pydantic_ai import ModelMessagesTypeAdapter
 from pydantic_ai import RunContext
 from pydantic_ai.messages import ModelMessage
@@ -39,7 +38,7 @@ class AgentDependencies:
     user: User
 
 
-agent = Agent(
+billy = Agent(
     "deepseek:deepseek-chat",
     instructions="""
     You are an assistant that helps people have more control over their expenses.
@@ -49,12 +48,18 @@ agent = Agent(
     fit the bill he's trying to register, ask him if he wants to create one, with a suggestion of 
     name and description.
     Avoid creating more than 10 categories for the user, unless they tell you to.
-    You won't be able to help the user if they are still not registered.
-    Check if the user is registered. Don't assume he isn't.
-    If that's the case, tell them
-    you'll only be able to help once they're registered.
 
     You are professional and pragmatic. No small talk. Avoid long messages (100+ characters).
+    """,
+    deps_type=AgentDependencies,
+)
+
+billys_secretary = Agent(
+    "deepseek:deepseek-chat",
+    instructions="""
+    Billy is an assistant that helps people have more control over their expenses.
+    You are Billy's secretary. Your only goal is to register the user.
+    For this, all you need is his name.
     """,
     deps_type=AgentDependencies,
 )
@@ -78,12 +83,8 @@ class PydanticAIAgentService:
 
         self._temp_storage_service = temp_storage_service
 
-        self._agent = agent
-
-        self._user_toolset = user_toolset
-        self._guest_toolset = guest_toolset
-
-    def _load_agent_dependencies(self, user: User | None):
+    def _load_agent_and_dependencies(self, user: User):
+        self._agent = billy if user.is_registered else billys_secretary
         return AgentDependencies(
             registration_service=self._registration_service,
             bill_service=self._bill_service,
@@ -100,7 +101,7 @@ class PydanticAIAgentService:
                 case MessageAuthor.BILLY:
                     pydantic_messages.append(ModelResponse(parts=[TextPart(content=message.body)]))
 
-        return pydantic_messages
+        return ModelMessagesTypeAdapter.validate_python(pydantic_messages)
 
     def _load_user_message_history(self, user: User) -> list[ModelMessage]:
         try:
@@ -120,16 +121,13 @@ class PydanticAIAgentService:
         )
 
     async def run(self, message_body: str, user: User) -> str:
-        agent_dependencies = self._load_agent_dependencies(user)
-        toolset = user_toolset if user.is_registered else guest_toolset
-
+        agent_dependencies = self._load_agent_and_dependencies(user)
         message_history = self._load_user_message_history(user)
 
         result = await self._agent.run(
             message_body,
             message_history=message_history,
             deps=agent_dependencies,
-            toolsets=[toolset],
         )
 
         self._cache_user_message_history(user, to_jsonable_python(result.all_messages()))
@@ -137,11 +135,7 @@ class PydanticAIAgentService:
         return result.output
 
 
-user_toolset = FunctionToolset()
-guest_toolset = FunctionToolset()
-
-
-@guest_toolset.tool
+@billys_secretary.tool
 def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User:
     """Finishes the registration of the user
 
@@ -154,7 +148,7 @@ def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User:
     return ctx.deps.registration_service.finish_registration(ctx.deps.user.id, user_name)
 
 
-@user_toolset.tool
+@billy.tool
 def get_user_name(ctx: RunContext[AgentDependencies]) -> str:
     """Gets the name of the user.
 
@@ -165,18 +159,7 @@ def get_user_name(ctx: RunContext[AgentDependencies]) -> str:
     return ctx.deps.user.name
 
 
-@user_toolset.tool
-def check_if_user_is_registered(ctx: RunContext[AgentDependencies]) -> bool:
-    """Checks whether the user is registered.
-
-    Returns:
-        bool: true if the user is registered. false otherwise.
-
-    """
-    return ctx.deps.user.is_registered
-
-
-@user_toolset.tool
+@billy.tool
 def register_category(
     ctx: RunContext[AgentDependencies],
     name: str,
@@ -197,7 +180,7 @@ def register_category(
         return "Category with this name already exists"
 
 
-@user_toolset.tool
+@billy.tool
 def get_all_categories(ctx: RunContext[AgentDependencies]) -> list[dict]:
     """Gets all categories from a tenant.
 
@@ -208,7 +191,7 @@ def get_all_categories(ctx: RunContext[AgentDependencies]) -> list[dict]:
     return ctx.deps.category_service.get_all(ctx.deps.user.tenant_id)
 
 
-@user_toolset.tool
+@billy.tool
 def register_bill(
     ctx: RunContext[AgentDependencies],
     date: datetime.date,
@@ -232,7 +215,7 @@ def register_bill(
         return "Category not found"
 
 
-@user_toolset.tool
+@billy.tool
 def edit_bill(
     ctx: RunContext[AgentDependencies],
     bill_id: int,
@@ -260,7 +243,7 @@ def edit_bill(
         return "Bill not found"
 
 
-@user_toolset.tool
+@billy.tool
 def get_bills(
     ctx: RunContext[AgentDependencies],
     date_range: tuple[datetime.date, datetime.date] | None = None,
@@ -280,7 +263,7 @@ def get_bills(
     return ctx.deps.bill_service.get_many(ctx.deps.user.tenant_id, category_id, date_range, value_range)
 
 
-@user_toolset.tool
+@billy.tool
 def get_today():
     """Returns a date object representing the current day
 
