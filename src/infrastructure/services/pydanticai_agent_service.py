@@ -49,7 +49,9 @@ agent = Agent(
     fit the bill he's trying to register, ask him if he wants to create one, with a suggestion of 
     name and description.
     Avoid creating more than 10 categories for the user, unless they tell you to.
-    You won't be able to help the user if they are still not registered. If that's the case, tell them
+    You won't be able to help the user if they are still not registered.
+    Check if the user is registered. Don't assume he isn't.
+    If that's the case, tell them
     you'll only be able to help once they're registered.
 
     You are professional and pragmatic. No small talk. Avoid long messages (100+ characters).
@@ -153,7 +155,7 @@ def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User:
 
 
 @user_toolset.tool
-def get_user_name(ctx: RunContext[str]) -> str:
+def get_user_name(ctx: RunContext[AgentDependencies]) -> str:
     """Gets the name of the user.
 
     Returns:
@@ -161,6 +163,17 @@ def get_user_name(ctx: RunContext[str]) -> str:
 
     """
     return ctx.deps.user.name
+
+
+@user_toolset.tool
+def check_if_user_is_registered(ctx: RunContext[AgentDependencies]) -> bool:
+    """Checks whether the user is registered.
+
+    Returns:
+        bool: true if the user is registered. false otherwise.
+
+    """
+    return ctx.deps.user.is_registered
 
 
 @user_toolset.tool

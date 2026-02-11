@@ -28,6 +28,7 @@ async def worker_callback(payload: dict):
         try:
             if not hasattr(async_tasks, task_name):
                 logger.error(f"Task '{task_name}' not found in async_tasks module")
+                return
 
             task_cls = getattr(async_tasks, task_name)
             task_build_args = [await resolve(dep) for dep in task_cls.dependencies]
