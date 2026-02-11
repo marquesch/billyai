@@ -23,5 +23,5 @@ class CategoryService:
 
     def update(self, tenant_id: int, category_id: int, name: str | None, description: str | None) -> Category:
         return self._category_repository.update(
-            tenant_id=tenant_id, category_id=category_id, name=name, description=description
+            tenant_id=tenant_id, category_id=category_id, name=name, description=description,
         )

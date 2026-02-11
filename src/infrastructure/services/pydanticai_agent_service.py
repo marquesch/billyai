@@ -5,6 +5,7 @@ from string import Template
 from pydantic_ai import Agent
 from pydantic_ai import ModelMessagesTypeAdapter
 from pydantic_ai import RunContext
+from pydantic_ai import ToolDefinition
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.messages import ModelRequest
 from pydantic_ai.messages import ModelResponse
@@ -54,16 +55,6 @@ billy = Agent(
     deps_type=AgentDependencies,
 )
 
-billys_secretary = Agent(
-    "deepseek:deepseek-chat",
-    instructions="""
-    Billy is an assistant that helps people have more control over their expenses.
-    You are Billy's secretary. Your only goal is to register the user.
-    For this, all you need is his name.
-    """,
-    deps_type=AgentDependencies,
-)
-
 
 class PydanticAIAgentService:
     def __init__(
@@ -84,7 +75,6 @@ class PydanticAIAgentService:
         self._temp_storage_service = temp_storage_service
 
     def _load_agent_and_dependencies(self, user: User):
-        self._agent = billy if user.is_registered else billys_secretary
         return AgentDependencies(
             registration_service=self._registration_service,
             bill_service=self._bill_service,
@@ -124,7 +114,7 @@ class PydanticAIAgentService:
         agent_dependencies = self._load_agent_and_dependencies(user)
         message_history = self._load_user_message_history(user)
 
-        result = await self._agent.run(
+        result = await billy.run(
             message_body,
             message_history=message_history,
             deps=agent_dependencies,
@@ -135,7 +125,41 @@ class PydanticAIAgentService:
         return result.output
 
 
-@billys_secretary.tool
+async def only_if_user_is_registered(
+    ctx: RunContext[AgentDependencies],
+    tool_def: ToolDefinition,
+) -> ToolDefinition | None:
+    if ctx.deps.user.is_registered:
+        return tool_def
+
+
+async def only_if_user_is_not_registered(
+    ctx: RunContext[AgentDependencies],
+    tool_def: ToolDefinition,
+) -> ToolDefinition | None:
+    if not ctx.deps.user.is_registered:
+        return tool_def
+
+
+@billy.instructions
+def get_today() -> str:
+    return f"The current day is {datetime.date.today()}"
+
+
+@billy.instructions
+def user_recognition(ctx: RunContext[AgentDependencies]) -> str:
+    return (
+        f"The current user is registered and is named {ctx.deps.user.name}"
+        if ctx.deps.user.is_registered
+        else """
+        The current user needs to finish their registration.
+        Ask him the following before you are able to finish his registration process:
+        Name (can either be his first or full name)
+        """
+    )
+
+
+@billy.tool(prepare=only_if_user_is_not_registered)
 def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User:
     """Finishes the registration of the user
 
@@ -148,18 +172,7 @@ def register_user(ctx: RunContext[AgentDependencies], user_name: str) -> User:
     return ctx.deps.registration_service.finish_registration(ctx.deps.user.id, user_name)
 
 
-@billy.tool
-def get_user_name(ctx: RunContext[AgentDependencies]) -> str:
-    """Gets the name of the user.
-
-    Returns:
-        str: the name of the current user
-
-    """
-    return ctx.deps.user.name
-
-
-@billy.tool
+@billy.tool(prepare=only_if_user_is_registered)
 def register_category(
     ctx: RunContext[AgentDependencies],
     name: str,
@@ -180,7 +193,7 @@ def register_category(
         return "Category with this name already exists"
 
 
-@billy.tool
+@billy.tool(prepare=only_if_user_is_registered)
 def get_all_categories(ctx: RunContext[AgentDependencies]) -> list[dict]:
     """Gets all categories from a tenant.
 
@@ -191,7 +204,7 @@ def get_all_categories(ctx: RunContext[AgentDependencies]) -> list[dict]:
     return ctx.deps.category_service.get_all(ctx.deps.user.tenant_id)
 
 
-@billy.tool
+@billy.tool(prepare=only_if_user_is_registered)
 def register_bill(
     ctx: RunContext[AgentDependencies],
     date: datetime.date,
@@ -215,7 +228,7 @@ def register_bill(
         return "Category not found"
 
 
-@billy.tool
+@billy.tool(prepare=only_if_user_is_registered)
 def edit_bill(
     ctx: RunContext[AgentDependencies],
     bill_id: int,
@@ -243,7 +256,7 @@ def edit_bill(
         return "Bill not found"
 
 
-@billy.tool
+@billy.tool(prepare=only_if_user_is_registered)
 def get_bills(
     ctx: RunContext[AgentDependencies],
     date_range: tuple[datetime.date, datetime.date] | None = None,
@@ -261,14 +274,3 @@ def get_bills(
 
     """
     return ctx.deps.bill_service.get_many(ctx.deps.user.tenant_id, category_id, date_range, value_range)
-
-
-@billy.tool
-def get_today():
-    """Returns a date object representing the current day
-
-    Return:
-        datetime.date: a date representing the current day
-
-    """
-    return datetime.date.today()

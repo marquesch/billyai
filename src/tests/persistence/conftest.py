@@ -6,7 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
 
-from domain.entities import MessageAuthor, MessageBroker
+from domain.entities import MessageAuthor
+from domain.entities import MessageBroker
 from infrastructure.persistence.database.models import Base
 from infrastructure.persistence.database.models import DBBill
 from infrastructure.persistence.database.models import DBCategory
