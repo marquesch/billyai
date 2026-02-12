@@ -16,8 +16,6 @@ class Settings(BaseSettings):
     database_password: str = "billy"
     database_host: str = "postgres"
     database_port: int = 5432
-    database_dialect: str = "postgresql"
-    database_driver: str = "psycopg"
     database_db: str = "billy"
     test_database_uri: str | None = None
 
