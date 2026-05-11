@@ -6,13 +6,14 @@ from domain.exceptions import BillNotFoundException
 from domain.exceptions import CategoryNotFoundException
 from domain.exceptions import FutureBillDateException
 from domain.exceptions import TenantNotFoundException
+from domain.ports.repositories import BillRepository
 from infrastructure.persistence.database.models import DBBill
 from infrastructure.persistence.database.models import DBCategory
 from infrastructure.persistence.database.models import DBTenant
 from infrastructure.persistence.database.repositories import DBRepository
 
 
-class DBBillRepository(DBRepository):
+class DBBillRepository(DBRepository, BillRepository):
     def _get_bill_or_raise(self, tenant_id: int, bill_id: int) -> DBBill:
         db_bill = self.session.query(DBBill).filter_by(tenant_id=tenant_id, id=bill_id).first()
 

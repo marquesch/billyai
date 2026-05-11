@@ -33,5 +33,6 @@ dev = [
     "pytest-env>=1.2.0",
     "pytest-freezer>=0.4.9",
     "pytest-mock>=3.15.1",
+    "scanapi>=1.0.4",
     "snoop>=0.6.0",
 ]

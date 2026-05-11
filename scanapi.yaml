@@ -1,0 +1,4 @@
+endpoints:
+  - name: billy
+    path: ${BASE_URL}/
+    requests:
